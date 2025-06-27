@@ -37,7 +37,7 @@ export async function generateQuestions(subject: string, count: number = 5) {
       console.error('Failed to parse JSON, trying to extract JSON from response:', parseError)
       
       // Try to extract JSON from the response if it contains extra text
-      const jsonMatch = response.match(/\[.*\]/s)
+      const jsonMatch = response.match(/\[[\s\S]*\]/)
       if (jsonMatch) {
         try {
           return JSON.parse(jsonMatch[0])
@@ -135,7 +135,7 @@ export async function evaluateResponse(question: string, response: string) {
       console.error('Failed to parse evaluation JSON, trying to extract JSON from response:', parseError)
       
       // Try to extract JSON from the response if it contains extra text
-      const jsonMatch = response_text.match(/\{.*\}/s)
+      const jsonMatch = response_text.match(/\{[\s\S]*\}/)
       if (jsonMatch) {
         try {
           return JSON.parse(jsonMatch[0])
