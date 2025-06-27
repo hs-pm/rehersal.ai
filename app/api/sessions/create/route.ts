@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { insertPracticeSession } from '@/lib/db'
+import { insertPracticeSession } from '../../../../lib/db'
 
 export async function POST(request: NextRequest) {
   try {
@@ -15,7 +15,8 @@ export async function POST(request: NextRequest) {
     const session = await insertPracticeSession({
       title,
       subject,
-      total_questions: totalQuestions || 0
+      total_questions: totalQuestions || 0,
+      completed_questions: 0
     })
 
     return NextResponse.json({

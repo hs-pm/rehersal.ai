@@ -91,8 +91,8 @@ export async function insertQuestion(question: Omit<Question, 'id' | 'created_at
 
 export async function insertPracticeSession(session: Omit<PracticeSession, 'id' | 'created_at'>) {
   const result = await sql`
-    INSERT INTO practice_sessions (title, subject, total_questions)
-    VALUES (${session.title}, ${session.subject}, ${session.total_questions})
+    INSERT INTO practice_sessions (title, subject, total_questions, completed_questions)
+    VALUES (${session.title}, ${session.subject}, ${session.total_questions}, ${session.completed_questions || 0})
     RETURNING *
   `
   return result.rows[0]
