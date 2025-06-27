@@ -40,6 +40,9 @@ interface SessionData {
     id: string
     question_text: string
     transcription: string
+    audio_url?: string
+    video_url?: string
+    text_response?: string
     evaluation: Evaluation
   }>
 }
@@ -50,12 +53,23 @@ export default function CompletePage() {
   const sessionId = searchParams.get('sessionId')
   const [sessionData, setSessionData] = useState<SessionData | null>(null)
   const [isLoading, setIsLoading] = useState(true)
+  const [expandedResponses, setExpandedResponses] = useState<Set<number>>(new Set())
 
   useEffect(() => {
     if (sessionId) {
       fetchSessionData()
     }
   }, [sessionId])
+
+  const toggleResponse = (index: number) => {
+    const newExpanded = new Set(expandedResponses)
+    if (newExpanded.has(index)) {
+      newExpanded.delete(index)
+    } else {
+      newExpanded.add(index)
+    }
+    setExpandedResponses(newExpanded)
+  }
 
   const fetchSessionData = async () => {
     try {
@@ -215,6 +229,89 @@ export default function CompletePage() {
                       <span className="text-gray-600">/ 100</span>
                     </div>
                   </div>
+                </div>
+
+                {/* Collapsible Response Viewer */}
+                <div className="mb-4">
+                  <button
+                    onClick={() => toggleResponse(index)}
+                    className="flex items-center text-sm text-gray-600 hover:text-gray-800 transition-colors"
+                  >
+                    <svg
+                      className={`w-4 h-4 mr-2 transition-transform ${
+                        expandedResponses.has(index) ? 'rotate-90' : ''
+                      }`}
+                      fill="none"
+                      stroke="currentColor"
+                      viewBox="0 0 24 24"
+                    >
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                    </svg>
+                    {expandedResponses.has(index) ? 'Hide Response' : 'View Response'}
+                  </button>
+                  
+                  {expandedResponses.has(index) && (
+                    <div className="mt-3 p-4 bg-blue-50 border border-blue-200 rounded-lg">
+                      <h4 className="font-medium text-gray-900 mb-2">Your Response:</h4>
+                      
+                      {/* Video Recording */}
+                      {response.video_url && (
+                        <div className="mb-4">
+                          <h5 className="text-sm font-medium text-gray-700 mb-2">Video Recording:</h5>
+                          <video 
+                            controls 
+                            className="w-full max-w-md rounded-lg shadow-sm"
+                            preload="metadata"
+                          >
+                            <source src={response.video_url} type="video/webm" />
+                            <source src={response.video_url} type="video/mp4" />
+                            Your browser does not support the video tag.
+                          </video>
+                        </div>
+                      )}
+                      
+                      {/* Audio Recording */}
+                      {response.audio_url && response.audio_url !== 'audio_url_placeholder' && (
+                        <div className="mb-4">
+                          <h5 className="text-sm font-medium text-gray-700 mb-2">Audio Recording:</h5>
+                          <audio 
+                            controls 
+                            className="w-full max-w-md"
+                            preload="metadata"
+                          >
+                            <source src={response.audio_url} type="audio/webm" />
+                            <source src={response.audio_url} type="audio/mp4" />
+                            Your browser does not support the audio tag.
+                          </audio>
+                        </div>
+                      )}
+                      
+                      {/* Text Response */}
+                      {response.text_response && (
+                        <div className="mb-4">
+                          <h5 className="text-sm font-medium text-gray-700 mb-2">Text Response:</h5>
+                          <p className="text-sm text-gray-700 whitespace-pre-wrap bg-white p-3 rounded border">
+                            {response.text_response}
+                          </p>
+                        </div>
+                      )}
+                      
+                      {/* Transcription */}
+                      {response.transcription && (
+                        <div>
+                          <h5 className="text-sm font-medium text-gray-700 mb-2">Transcription:</h5>
+                          <p className="text-sm text-gray-700 whitespace-pre-wrap bg-white p-3 rounded border">
+                            {response.transcription}
+                          </p>
+                        </div>
+                      )}
+                      
+                      {/* Fallback if no response recorded */}
+                      {!response.video_url && !response.audio_url && !response.text_response && !response.transcription && (
+                        <p className="text-sm text-gray-500 italic">No response recorded</p>
+                      )}
+                    </div>
+                  )}
                 </div>
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">

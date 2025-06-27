@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { insertPracticeSession } from '../../../../lib/db'
+import { createPracticeSession } from '../../../../lib/db'
 
 export async function POST(request: NextRequest) {
   try {
@@ -12,7 +12,7 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    const session = await insertPracticeSession({
+    const session = await createPracticeSession({
       title,
       subject,
       total_questions: totalQuestions || 0,

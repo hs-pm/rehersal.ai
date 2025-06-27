@@ -1,23 +1,33 @@
-import Groq from 'groq-sdk'
+import { Groq } from 'groq-sdk'
 
 const groq = new Groq({
-  apiKey: process.env.GROQ_API_KEY,
+  apiKey: process.env.GROQ_API_KEY || '',
 })
 
 export default groq
 
-export async function generateQuestions(subject: string, count: number = 5) {
+export async function generateQuestions(subject: string, count: number = 5, types: string[] = ['behavioral', 'technical', 'situational']) {
   try {
+    const typesText = types.join(', ')
     const completion = await groq.chat.completions.create({
       messages: [
         {
           role: "system",
-          content: `You are an expert interview coach. Generate ${count} relevant interview questions for the subject: "${subject}". 
-          Make questions diverse - some behavioral, some technical, some situational. 
-          Return ONLY a valid JSON array of question objects with this exact structure:
-          [{"id": "1", "question": "Question text", "type": "behavioral|technical|situational", "category": "subject area"}]
+          content: `You are an expert interview coach. Generate ${count} relevant interview questions for the subject: "${subject}".
           
-          Do not include any text before or after the JSON array. Only return the JSON.`
+          IMPORTANT: Return ONLY a valid JSON array with no additional text, formatting, or explanations.
+          
+          Requirements:
+          - Only generate questions of the following types: ${typesText}
+          - Do NOT include any questions of other types.
+          - Use this EXACT JSON structure for each question:
+            {"id": "1", "question": "Question text", "type": "${typesText}", "category": "subject area"}
+          - Return ONLY the JSON array: [{"id": "1", ...}, {"id": "2", ...}]
+          - No text before or after the JSON
+          - No markdown formatting
+          - No explanations or comments
+          - Ensure all quotes are properly escaped
+          - Ensure the JSON is properly formatted with no trailing commas`
         }
       ],
       model: "llama3-8b-8192",
@@ -36,13 +46,80 @@ export async function generateQuestions(subject: string, count: number = 5) {
     } catch (parseError) {
       console.error('Failed to parse JSON, trying to extract JSON from response:', parseError)
       
-      // Try to extract JSON from the response if it contains extra text
-      const jsonMatch = response.match(/\[[\s\S]*\]/)
-      if (jsonMatch) {
+      // Try multiple strategies to extract valid JSON
+      let cleanedResponse = response.trim()
+      
+      // Strategy 1: Remove any text before the first [
+      const firstBracketIndex = cleanedResponse.indexOf('[')
+      if (firstBracketIndex > 0) {
+        cleanedResponse = cleanedResponse.substring(firstBracketIndex)
+      }
+      
+      // Strategy 2: Remove any text after the last ]
+      const lastBracketIndex = cleanedResponse.lastIndexOf(']')
+      if (lastBracketIndex > 0 && lastBracketIndex < cleanedResponse.length - 1) {
+        cleanedResponse = cleanedResponse.substring(0, lastBracketIndex + 1)
+      }
+      
+      // Strategy 3: Try to fix common JSON formatting issues
+      cleanedResponse = cleanedResponse
+        .replace(/\n/g, ' ') // Replace newlines with spaces
+        .replace(/\r/g, '') // Remove carriage returns
+        .replace(/\t/g, ' ') // Replace tabs with spaces
+        .replace(/\s+/g, ' ') // Replace multiple spaces with single space
+        .replace(/,\s*]/g, ']') // Remove trailing commas before closing brackets
+        .replace(/,\s*}/g, '}') // Remove trailing commas before closing braces
+      
+      try {
+        return JSON.parse(cleanedResponse)
+      } catch (secondParseError) {
+        console.error('Failed to parse cleaned JSON:', secondParseError)
+        
+        // Strategy 4: Try to extract JSON using regex
+        const jsonMatch = response.match(/\[[\s\S]*\]/)
+        if (jsonMatch) {
+          try {
+            const extractedJson = jsonMatch[0]
+              .replace(/,\s*]/g, ']') // Remove trailing commas
+              .replace(/,\s*}/g, '}') // Remove trailing commas
+            return JSON.parse(extractedJson)
+          } catch (thirdParseError) {
+            console.error('Failed to parse regex-extracted JSON:', thirdParseError)
+          }
+        }
+        
+        // Strategy 5: Try to manually construct JSON from the response
         try {
-          return JSON.parse(jsonMatch[0])
-        } catch (secondParseError) {
-          console.error('Failed to parse extracted JSON:', secondParseError)
+          const lines = response.split('\n').filter(line => line.trim())
+          const questions: Array<{ id: string; question: string; type: string; category: string }> = []
+          let currentQuestion: { id?: string; question?: string; type?: string; category?: string } = {}
+          
+          for (const line of lines) {
+            if (line.includes('"id"') || line.includes('"question"') || line.includes('"type"') || line.includes('"category"')) {
+              // Extract key-value pairs
+              const keyMatch = line.match(/"([^"]+)":\s*"([^"]+)"/)
+              if (keyMatch) {
+                currentQuestion[keyMatch[1] as keyof typeof currentQuestion] = keyMatch[2]
+              }
+              
+              // If we have all required fields, add to questions
+              if (currentQuestion.id && currentQuestion.question && currentQuestion.type && currentQuestion.category) {
+                questions.push({ 
+                  id: currentQuestion.id, 
+                  question: currentQuestion.question, 
+                  type: currentQuestion.type, 
+                  category: currentQuestion.category 
+                })
+                currentQuestion = {}
+              }
+            }
+          }
+          
+          if (questions.length > 0) {
+            return questions
+          }
+        } catch (manualParseError) {
+          console.error('Failed to manually parse JSON:', manualParseError)
         }
       }
       
@@ -51,7 +128,7 @@ export async function generateQuestions(subject: string, count: number = 5) {
       return Array.from({ length: count }, (_, i) => ({
         id: (i + 1).toString(),
         question: `Sample ${subject} question ${i + 1}`,
-        type: i % 3 === 0 ? 'behavioral' : i % 3 === 1 ? 'technical' : 'situational',
+        type: types[i % types.length] || 'behavioral',
         category: subject
       }))
     }

@@ -1,10 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { generateQuestions } from '../../../../lib/groq'
-import { insertQuestion } from '../../../../lib/db'
+import { insertQuestion, Question, createTables } from '../../../../lib/db'
 
 export async function POST(request: NextRequest) {
   try {
-    const { subject, count = 5 } = await request.json()
+    const { subject, count = 5, types = ['behavioral', 'technical', 'situational'] } = await request.json()
 
     if (!subject) {
       return NextResponse.json(
@@ -22,33 +22,43 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    console.log('Generating questions for subject:', subject, 'count:', count)
+    console.log('Generating questions for subject:', subject, 'count:', count, 'types:', types)
+
+    // Ensure database tables exist
+    try {
+      await createTables()
+      console.log('Database tables created/verified successfully')
+    } catch (dbError) {
+      console.error('Failed to create database tables:', dbError)
+      // Continue without database storage
+    }
 
     // Generate questions using Groq
-    const questions = await generateQuestions(subject, count)
-
+    const questions = await generateQuestions(subject, count, types)
     console.log('Generated questions:', questions)
 
     // Store questions in database
-    const storedQuestions = []
+    const storedQuestions: Question[] = []
     for (const question of questions) {
-      const stored = await insertQuestion({
-        question: question.question,
-        type: question.type,
-        category: question.category
-      })
-      storedQuestions.push(stored)
+      try {
+        const storedQuestion = await insertQuestion(question)
+        storedQuestions.push(storedQuestion)
+      } catch (dbError) {
+        console.error('Failed to store question in database:', dbError)
+        // Continue with other questions even if one fails
+      }
     }
 
     return NextResponse.json({
-      success: true,
-      questions: storedQuestions
+      questions: questions,
+      storedCount: storedQuestions.length,
+      totalGenerated: questions.length
     })
 
   } catch (error) {
     console.error('Error generating questions:', error)
     return NextResponse.json(
-      { error: 'Failed to generate questions', details: error instanceof Error ? error.message : 'Unknown error' },
+      { error: 'Failed to generate questions' },
       { status: 500 }
     )
   }

@@ -27,6 +27,9 @@ export async function POST(request: NextRequest) {
     if (audioData) {
       transcription = await transcribeAudio(audioData)
       finalResponse = transcription
+    } else {
+      // If no audio, use textResponse as transcription
+      transcription = textResponse || ''
     }
 
     // Evaluate the response

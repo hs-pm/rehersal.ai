@@ -1,7 +1,8 @@
 'use client'
 
-import React, { useState, useRef, useCallback } from 'react'
+import React, { useState, useRef, useCallback, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
+import Webcam from 'react-webcam'
 import { 
   Mic, 
   Video, 
@@ -11,8 +12,11 @@ import {
   Square,
   Send,
   Brain,
-  Loader2
+  Loader2,
+  Volume2,
+  VolumeX
 } from 'lucide-react'
+import { speechRecognition, getSpeechRecognitionSupport, SpeechRecognitionResult } from '../../../lib/speech'
 
 interface Question {
   id: string
@@ -40,90 +44,324 @@ interface Evaluation {
 export default function NewPracticePage() {
   const router = useRouter()
   const [subject, setSubject] = useState('')
-  const [questionCount, setQuestionCount] = useState(5)
+  const [count, setCount] = useState(5)
+  const [selectedTypes, setSelectedTypes] = useState<string[]>(['behavioral', 'technical', 'situational'])
   const [questions, setQuestions] = useState<Question[]>([])
   const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0)
   const [isRecording, setIsRecording] = useState(false)
   const [isVideoRecording, setIsVideoRecording] = useState(false)
   const [textResponse, setTextResponse] = useState('')
   const [evaluations, setEvaluations] = useState<Evaluation[]>([])
-  const [isLoading, setIsLoading] = useState(false)
-  const [isGenerating, setIsGenerating] = useState(false)
-  const [sessionId, setSessionId] = useState<string | null>(null)
+  const [loading, setLoading] = useState(false)
+  const [sessionId, setSessionId] = useState<number | null>(null)
+  const [showCamera, setShowCamera] = useState(false)
+  const [recordedVideo, setRecordedVideo] = useState<string | null>(null)
+  const [isPlaying, setIsPlaying] = useState(false)
+  const [submitting, setSubmitting] = useState(false)
+  const [evaluation, setEvaluation] = useState<Evaluation | null>(null)
+  const [showResults, setShowResults] = useState(false)
+  const [sessionComplete, setSessionComplete] = useState(false)
+
+  // Speech recognition states
+  const [isListening, setIsListening] = useState(false)
+  const [transcript, setTranscript] = useState('')
+  const [interimTranscript, setInterimTranscript] = useState('')
+  const [speechSupported, setSpeechSupported] = useState(false)
+  const [speechError, setSpeechError] = useState<string | null>(null)
+
+  // Refs for video recording
+  const webcamRef = useRef<Webcam>(null)
+  const mediaRecorderRef = useRef<MediaRecorder | null>(null)
+  const recordedChunksRef = useRef<Blob[]>([])
+
+  // Initialize speech recognition
+  useEffect(() => {
+    const support = getSpeechRecognitionSupport()
+    setSpeechSupported(support.supported)
+    
+    if (support.supported) {
+      // Configure speech recognition
+      speechRecognition.configure({
+        continuous: true,
+        interimResults: true,
+        lang: 'en-US'
+      })
+
+      // Set up event handlers
+      speechRecognition.onResult((result: SpeechRecognitionResult) => {
+        if (result.isFinal) {
+          setTranscript(prev => prev + ' ' + result.transcript)
+          setInterimTranscript('')
+        } else {
+          setInterimTranscript(result.transcript)
+        }
+      })
+
+      speechRecognition.onError((error: string) => {
+        setSpeechError(error)
+        setIsListening(false)
+      })
+
+      speechRecognition.onEnd(() => {
+        setIsListening(false)
+      })
+    }
+  }, [])
+
+  // Navigate to results page when session is complete
+  useEffect(() => {
+    if (showResults && sessionId) {
+      router.push(`/practice/complete?sessionId=${sessionId}`)
+    }
+  }, [showResults, sessionId, router])
 
   const generateQuestions = async () => {
     if (!subject.trim()) return
     
-    setIsGenerating(true)
+    // Check if at least one question type is selected
+    const selectedTypesArray = Object.entries(selectedTypes)
+      .filter(([_, isSelected]) => isSelected)
+      .map(([type, _]) => type)
+    
+    if (selectedTypesArray.length === 0) {
+      alert('Please select at least one question type')
+      return
+    }
+    
+    setLoading(true)
     try {
       const response = await fetch('/api/questions/generate', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ subject, count: questionCount })
+        body: JSON.stringify({ 
+          subject, 
+          count: count,
+          types: selectedTypesArray
+        })
       })
       
       const data = await response.json()
-      if (data.success) {
+      
+      // Check if we have questions in the response
+      if (data.questions && data.questions.length > 0) {
         setQuestions(data.questions)
         
         // Create practice session
-        const sessionResponse = await fetch('/api/sessions/create', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            title: `${subject} Practice Session`,
-            subject,
-            totalQuestions: data.questions.length
+        try {
+          const sessionResponse = await fetch('/api/sessions/create', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              title: `${subject} Practice Session`,
+              subject,
+              totalQuestions: data.questions.length
+            })
           })
-        })
-        
-        const sessionData = await sessionResponse.json()
-        if (sessionData.success) {
-          setSessionId(sessionData.session.id)
+          
+          const sessionData = await sessionResponse.json()
+          if (sessionData.success) {
+            setSessionId(sessionData.session.id)
+          }
+        } catch (sessionError) {
+          console.error('Failed to create session:', sessionError)
+          // Continue without session creation
         }
+      } else {
+        console.error('No questions received from API')
       }
     } catch (error) {
       console.error('Error generating questions:', error)
     } finally {
-      setIsGenerating(false)
+      setLoading(false)
     }
   }
 
-  const submitResponse = async () => {
-    if (!sessionId || currentQuestionIndex >= questions.length) return
-    
-    setIsLoading(true)
+  // Video recording functions
+  const startVideoRecording = useCallback(async () => {
     try {
-      const currentQuestion = questions[currentQuestionIndex]
-      
-      const response = await fetch('/api/responses/evaluate', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          sessionId,
-          questionId: currentQuestion.id,
-          questionText: currentQuestion.question,
-          textResponse,
-          audioData: null,
-          videoUrl: null
-        })
+      const stream = await navigator.mediaDevices.getUserMedia({ 
+        video: { 
+          width: { ideal: 1280 },
+          height: { ideal: 720 },
+          frameRate: { ideal: 30 }
+        }, 
+        audio: { 
+          echoCancellation: true,
+          noiseSuppression: true,
+          autoGainControl: true,
+          sampleRate: 48000,
+          channelCount: 2
+        } 
       })
       
-      const data = await response.json()
-      if (data.success) {
-        setEvaluations([...evaluations, data.evaluation])
-        
-        if (currentQuestionIndex < questions.length - 1) {
-          setCurrentQuestionIndex(currentQuestionIndex + 1)
-          setTextResponse('')
-        } else {
-          router.push(`/practice/complete?sessionId=${sessionId}`)
+      if (webcamRef.current) {
+        webcamRef.current.video!.srcObject = stream
+      }
+      
+      // Configure MediaRecorder with better settings
+      const options = {
+        mimeType: 'video/webm;codecs=vp9,opus',
+        videoBitsPerSecond: 2500000, // 2.5 Mbps
+        audioBitsPerSecond: 128000   // 128 kbps
+      }
+      
+      // Check if the preferred codec is supported, fallback to default if not
+      if (!MediaRecorder.isTypeSupported(options.mimeType)) {
+        console.log('Preferred codec not supported, using default')
+        mediaRecorderRef.current = new MediaRecorder(stream)
+      } else {
+        mediaRecorderRef.current = new MediaRecorder(stream, options)
+      }
+      
+      recordedChunksRef.current = []
+      
+      mediaRecorderRef.current.ondataavailable = (event) => {
+        if (event.data.size > 0) {
+          recordedChunksRef.current.push(event.data)
         }
+      }
+      
+      mediaRecorderRef.current.onstop = () => {
+        const blob = new Blob(recordedChunksRef.current, {
+          type: 'video/webm'
+        })
+        const url = URL.createObjectURL(blob)
+        setRecordedVideo(url)
+        setShowCamera(false)
+      }
+      
+      mediaRecorderRef.current.onerror = (event) => {
+        console.error('MediaRecorder error:', event)
+        alert('Error during recording. Please try again.')
+        setIsVideoRecording(false)
+        setShowCamera(false)
+      }
+      
+      mediaRecorderRef.current.onstart = () => {
+        console.log('MediaRecorder started successfully')
+      }
+      
+      // Start recording with timeslice parameter (100ms chunks) to prevent audio cuts
+      mediaRecorderRef.current.start(100)
+      setIsVideoRecording(true)
+      setShowCamera(true)
+    } catch (error) {
+      console.error('Error starting video recording:', error)
+      alert('Unable to access camera. Please check permissions.')
+    }
+  }, [])
+
+  const stopVideoRecording = useCallback(() => {
+    if (mediaRecorderRef.current && isVideoRecording) {
+      try {
+        mediaRecorderRef.current.stop()
+        setIsVideoRecording(false)
+        
+        // Stop all tracks to prevent memory leaks
+        if (webcamRef.current?.video?.srcObject) {
+          const stream = webcamRef.current.video.srcObject as MediaStream
+          stream.getTracks().forEach(track => {
+            track.stop()
+            console.log('Stopped track:', track.kind)
+          })
+        }
+        
+        // Clear the video source
+        if (webcamRef.current?.video) {
+          webcamRef.current.video.srcObject = null
+        }
+      } catch (error) {
+        console.error('Error stopping video recording:', error)
+        setIsVideoRecording(false)
+      }
+    }
+  }, [isVideoRecording])
+
+  const handleVideoToggle = () => {
+    if (isVideoRecording) {
+      stopVideoRecording()
+    } else {
+      startVideoRecording()
+    }
+  }
+
+  // Speech recognition functions
+  const startListening = useCallback(() => {
+    if (!speechSupported) {
+      setSpeechError('Speech recognition not supported in this browser')
+      return
+    }
+
+    setSpeechError(null)
+    const success = speechRecognition.start()
+    if (success) {
+      setIsListening(true)
+    } else {
+      setSpeechError('Failed to start speech recognition')
+    }
+  }, [speechSupported])
+
+  const stopListening = useCallback(() => {
+    speechRecognition.stop()
+    setIsListening(false)
+  }, [])
+
+  const clearTranscript = useCallback(() => {
+    setTranscript('')
+    setInterimTranscript('')
+  }, [])
+
+  const handleSubmitResponse = async () => {
+    if (!sessionId || currentQuestionIndex >= questions.length) return
+
+    setSubmitting(true)
+    try {
+      // Combine text response with speech transcript
+      const finalResponse = textResponse.trim() || transcript.trim()
+      
+      if (!finalResponse) {
+        alert('Please provide a response (text or speech)')
+        return
+      }
+
+      const response = await fetch('/api/responses/evaluate', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          sessionId,
+          questionId: questions[currentQuestionIndex].id,
+          questionText: questions[currentQuestionIndex].question,
+          textResponse: finalResponse,
+          videoUrl: recordedVideo,
+        }),
+      })
+
+      if (!response.ok) {
+        throw new Error('Failed to submit response')
+      }
+
+      const data = await response.json()
+      setEvaluation(data.evaluation)
+
+      // Move to next question or complete session
+      if (currentQuestionIndex < questions.length - 1) {
+        setCurrentQuestionIndex(prev => prev + 1)
+        setTextResponse('')
+        setTranscript('')
+        setInterimTranscript('')
+        setRecordedVideo(null)
+        setEvaluation(null)
+      } else {
+        setSessionComplete(true)
+        setShowResults(true)
       }
     } catch (error) {
       console.error('Error submitting response:', error)
+      alert('Failed to submit response. Please try again.')
     } finally {
-      setIsLoading(false)
+      setSubmitting(false)
     }
   }
 
@@ -153,8 +391,8 @@ export default function NewPracticePage() {
                   Number of Questions
                 </label>
                 <select
-                  value={questionCount}
-                  onChange={(e) => setQuestionCount(Number(e.target.value))}
+                  value={count}
+                  onChange={(e) => setCount(Number(e.target.value))}
                   className="input-field"
                 >
                   <option value={3}>3 Questions</option>
@@ -162,13 +400,48 @@ export default function NewPracticePage() {
                   <option value={10}>10 Questions</option>
                 </select>
               </div>
-              
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Question Types
+                </label>
+                <div className="space-y-2">
+                  <label className="flex items-center">
+                    <input
+                      type="checkbox"
+                      checked={selectedTypes.includes('behavioral')}
+                      onChange={(e) => setSelectedTypes(prev => e.target.checked ? [...prev, 'behavioral'] : prev.filter(t => t !== 'behavioral'))}
+                      className="mr-2"
+                    />
+                    Behavioral
+                  </label>
+                  <label className="flex items-center">
+                    <input
+                      type="checkbox"
+                      checked={selectedTypes.includes('technical')}
+                      onChange={(e) => setSelectedTypes(prev => e.target.checked ? [...prev, 'technical'] : prev.filter(t => t !== 'technical'))}
+                      className="mr-2"
+                    />
+                    Technical
+                  </label>
+                  <label className="flex items-center">
+                    <input
+                      type="checkbox"
+                      checked={selectedTypes.includes('situational')}
+                      onChange={(e) => setSelectedTypes(prev => e.target.checked ? [...prev, 'situational'] : prev.filter(t => t !== 'situational'))}
+                      className="mr-2"
+                    />
+                    Situational
+                  </label>
+                </div>
+              </div>
+
               <button
                 onClick={generateQuestions}
-                disabled={!subject.trim() || isGenerating}
+                disabled={loading || !subject.trim()}
                 className="btn-primary w-full flex items-center justify-center"
               >
-                {isGenerating ? (
+                {loading ? (
                   <>
                     <Loader2 className="w-4 h-4 mr-2 animate-spin" />
                     Generating Questions...
@@ -218,6 +491,7 @@ export default function NewPracticePage() {
                 <span className={`px-2 py-1 rounded text-xs font-medium ${
                   currentQuestion.type === 'behavioral' ? 'bg-blue-100 text-blue-800' :
                   currentQuestion.type === 'technical' ? 'bg-green-100 text-green-800' :
+                  currentQuestion.type === 'situational' ? 'bg-orange-100 text-orange-800' :
                   'bg-purple-100 text-purple-800'
                 }`}>
                   {currentQuestion.type}
@@ -230,79 +504,206 @@ export default function NewPracticePage() {
               </h2>
             </div>
 
-            {/* Recording Controls */}
-            <div className="card">
-              <h3 className="text-lg font-semibold text-gray-900 mb-4">Record Your Response</h3>
+            {/* Response Section */}
+            <div className="bg-white rounded-lg shadow-md p-6">
+              <h3 className="text-lg font-semibold mb-4">Your Response</h3>
               
-              <div className="grid grid-cols-2 gap-4 mb-6">
-                <div className="text-center">
-                  <button
-                    onClick={() => setIsRecording(!isRecording)}
-                    className={`w-16 h-16 rounded-full flex items-center justify-center transition-colors ${
-                      isRecording 
-                        ? 'bg-red-500 hover:bg-red-600 text-white' 
-                        : 'bg-gray-100 hover:bg-gray-200 text-gray-700'
-                    }`}
-                  >
-                    {isRecording ? <Pause className="w-6 h-6" /> : <Mic className="w-6 h-6" />}
-                  </button>
-                  <p className="text-sm text-gray-600 mt-2">Audio</p>
-                </div>
-                
-                <div className="text-center">
-                  <button
-                    onClick={() => setIsVideoRecording(!isVideoRecording)}
-                    className={`w-16 h-16 rounded-full flex items-center justify-center transition-colors ${
-                      isVideoRecording 
-                        ? 'bg-red-500 hover:bg-red-600 text-white' 
-                        : 'bg-gray-100 hover:bg-gray-200 text-gray-700'
-                    }`}
-                  >
-                    {isVideoRecording ? <Square className="w-6 h-6" /> : <Video className="w-6 h-6" />}
-                  </button>
-                  <p className="text-sm text-gray-600 mt-2">Video</p>
-                </div>
-              </div>
-            </div>
+              {/* Speech Recognition Controls */}
+              {speechSupported && (
+                <div className="mb-4 p-4 bg-gray-50 rounded-lg">
+                  <div className="flex items-center justify-between mb-3">
+                    <h4 className="font-medium text-gray-700">Voice Response</h4>
+                    <div className="flex items-center space-x-2">
+                      {isListening && (
+                        <div className="flex items-center space-x-1">
+                          <div className="w-2 h-2 bg-red-500 rounded-full animate-pulse"></div>
+                          <span className="text-sm text-red-600">Listening...</span>
+                        </div>
+                      )}
+                      {speechError && (
+                        <span className="text-sm text-red-600">{speechError}</span>
+                      )}
+                    </div>
+                  </div>
+                  
+                  <div className="flex items-center space-x-3 mb-3">
+                    <button
+                      onClick={isListening ? stopListening : startListening}
+                      className={`p-3 rounded-full transition-colors ${
+                        isListening 
+                          ? 'bg-red-500 text-white hover:bg-red-600' 
+                          : 'bg-blue-500 text-white hover:bg-blue-600'
+                      }`}
+                      disabled={!speechSupported}
+                    >
+                      {isListening ? <VolumeX size={20} /> : <Volume2 size={20} />}
+                    </button>
+                    <span className="text-sm text-gray-600">
+                      {isListening ? 'Click to stop recording' : 'Click to start voice response'}
+                    </span>
+                    {transcript && (
+                      <button
+                        onClick={clearTranscript}
+                        className="text-sm text-gray-500 hover:text-gray-700"
+                      >
+                        Clear
+                      </button>
+                    )}
+                  </div>
 
-            {/* Text Response */}
-            <div className="card">
-              <h3 className="text-lg font-semibold text-gray-900 mb-4">Or Type Your Response</h3>
-              <textarea
-                value={textResponse}
-                onChange={(e) => setTextResponse(e.target.value)}
-                placeholder="Type your response here..."
-                className="input-field min-h-[200px] resize-none"
-              />
-            </div>
-
-            <button
-              onClick={submitResponse}
-              disabled={isLoading || (!textResponse.trim())}
-              className="btn-primary w-full flex items-center justify-center"
-            >
-              {isLoading ? (
-                <>
-                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                  Evaluating...
-                </>
-              ) : (
-                <>
-                  <Send className="w-4 h-4 mr-2" />
-                  Submit Response
-                </>
+                  {/* Transcript Display */}
+                  {transcript && (
+                    <div className="mb-3">
+                      <div className="text-sm text-gray-600 mb-1">Transcript:</div>
+                      <div className="p-3 bg-white border rounded-lg text-gray-800">
+                        {transcript}
+                        {interimTranscript && (
+                          <span className="text-gray-400 italic">
+                            {interimTranscript}
+                          </span>
+                        )}
+                      </div>
+                    </div>
+                  )}
+                </div>
               )}
-            </button>
+
+              {/* Browser Support Warning */}
+              {!speechSupported && (
+                <div className="mb-4 p-4 bg-yellow-50 border border-yellow-200 rounded-lg">
+                  <div className="flex items-start">
+                    <div className="flex-shrink-0">
+                      <svg className="h-5 w-5 text-yellow-400" viewBox="0 0 20 20" fill="currentColor">
+                        <path fillRule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
+                      </svg>
+                    </div>
+                    <div className="ml-3">
+                      <h3 className="text-sm font-medium text-yellow-800">
+                        Voice Response Not Available
+                      </h3>
+                      <div className="mt-2 text-sm text-yellow-700">
+                        <p>
+                          Your browser doesn't support voice recognition. Please use Chrome, Edge, or Safari for voice response functionality.
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* Text Response */}
+              <div className="mb-4">
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Text Response {speechSupported && '(or use voice above)'}
+                </label>
+                <textarea
+                  value={textResponse}
+                  onChange={(e) => setTextResponse(e.target.value)}
+                  placeholder="Type your response here..."
+                  className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-none"
+                  rows={4}
+                />
+              </div>
+
+              {/* Video Recording Section */}
+              <div className="mb-4">
+                <div className="flex items-center space-x-3 mb-3">
+                  <button
+                    onClick={showCamera ? stopVideoRecording : startVideoRecording}
+                    className={`p-3 rounded-full transition-colors ${
+                      isVideoRecording 
+                        ? 'bg-red-500 text-white hover:bg-red-600' 
+                        : 'bg-green-500 text-white hover:bg-green-600'
+                    }`}
+                  >
+                    {isVideoRecording ? <Square size={20} /> : <Video size={20} />}
+                  </button>
+                  <span className="text-sm text-gray-600">
+                    {isVideoRecording ? 'Recording... Click to stop' : 'Record video response'}
+                  </span>
+                </div>
+
+                {/* Video Preview */}
+                {showCamera && (
+                  <div className="mb-3">
+                    <Webcam
+                      ref={webcamRef}
+                      className="w-full rounded-lg"
+                      videoConstraints={{
+                        width: 640,
+                        height: 480,
+                        facingMode: 'user'
+                      }}
+                    />
+                  </div>
+                )}
+
+                {/* Recorded Video Playback */}
+                {recordedVideo && (
+                  <div className="mb-3">
+                    <video
+                      src={recordedVideo}
+                      controls
+                      className="w-full rounded-lg"
+                      onPlay={() => setIsPlaying(true)}
+                      onPause={() => setIsPlaying(false)}
+                      onEnded={() => setIsPlaying(false)}
+                    />
+                  </div>
+                )}
+              </div>
+
+              {/* Submit Button */}
+              <button
+                onClick={handleSubmitResponse}
+                disabled={submitting || (!textResponse.trim() && !transcript.trim() && !recordedVideo)}
+                className="btn-primary w-full flex items-center justify-center"
+              >
+                {submitting ? (
+                  <>
+                    <Loader2 className="animate-spin mr-2" size={20} />
+                    Submitting...
+                  </>
+                ) : (
+                  <>
+                    <Send className="mr-2" size={20} />
+                    Submit Response
+                  </>
+                )}
+              </button>
+            </div>
           </div>
 
           {/* Video Preview */}
           <div className="card">
             <h3 className="text-lg font-semibold text-gray-900 mb-4">Video Preview</h3>
             <div className="relative bg-gray-900 rounded-lg overflow-hidden h-64 flex items-center justify-center">
-              <div className="text-gray-400 text-center">
-                <Video className="w-12 h-12 mx-auto mb-2" />
-                <p>Video recording will appear here</p>
-              </div>
+              {showCamera ? (
+                <Webcam
+                  ref={webcamRef}
+                  audio={true}
+                  className="w-full h-full object-cover"
+                  screenshotFormat="image/jpeg"
+                />
+              ) : recordedVideo ? (
+                <video
+                  src={recordedVideo}
+                  controls
+                  className="w-full h-full object-cover"
+                />
+              ) : (
+                <div className="text-gray-400 text-center">
+                  <Video className="w-12 h-12 mx-auto mb-2" />
+                  <p>Video recording will appear here</p>
+                  <p className="text-sm mt-1">Click the video button to start recording</p>
+                </div>
+              )}
+              
+              {isVideoRecording && (
+                <div className="absolute top-4 right-4 bg-red-500 text-white px-2 py-1 rounded text-sm">
+                  REC
+                </div>
+              )}
             </div>
           </div>
         </div>
