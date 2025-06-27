@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { evaluateResponse, transcribeAudio } from '@/lib/groq'
-import { insertResponse } from '@/lib/db'
+import { evaluateResponse, transcribeAudio } from '../../../../lib/groq'
+import { insertResponse } from '../../../../lib/db'
 
 export async function POST(request: NextRequest) {
   try {
