@@ -87,13 +87,18 @@ function parseJSONSafely(jsonString: string): any {
 export async function generateQuestions(
   subject: string,
   count: number,
-  selectedTypes: string[] = ['behavioral', 'technical', 'situational', 'coding']
+  selectedTypes: string[] = ['behavioral', 'technical', 'situational', 'coding'],
+  context?: {
+    resume?: string
+    jobDescription?: string
+    candidateAnalysis?: string
+  }
 ): Promise<Question[]> {
   try {
     console.log(`Generating questions for subject: ${subject} count: ${count} types:`, selectedTypes)
     
     const questionType = normalizeType(selectedTypes[0], 'behavioral');
-    const prompt = getQuestionPrompt(questionType, count, subject)
+    const prompt = getQuestionPrompt(questionType, count, subject, context)
     
     const completion = await groq.chat.completions.create({
       messages: [

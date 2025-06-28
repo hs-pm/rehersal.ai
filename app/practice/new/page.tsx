@@ -14,7 +14,8 @@ import {
   Brain,
   Loader2,
   Volume2,
-  VolumeX
+  VolumeX,
+  ChevronDown
 } from 'lucide-react'
 import { speechRecognition, getSpeechRecognitionSupport, SpeechRecognitionResult } from '../../../lib/speech'
 
@@ -67,6 +68,12 @@ export default function NewPracticePage() {
   const [guidance, setGuidance] = useState('')
   const [showGuidance, setShowGuidance] = useState(false)
   const [loadingGuidance, setLoadingGuidance] = useState(false)
+
+  // Advanced section state
+  const [showAdvanced, setShowAdvanced] = useState(false)
+  const [resume, setResume] = useState('')
+  const [jobDescription, setJobDescription] = useState('')
+  const [candidateAnalysis, setCandidateAnalysis] = useState('')
 
   // Speech recognition states
   const [isListening, setIsListening] = useState(false)
@@ -138,7 +145,11 @@ export default function NewPracticePage() {
         body: JSON.stringify({ 
           subject, 
           count: count,
-          types: selectedTypes
+          types: selectedTypes,
+          // Advanced fields (optional)
+          resume: resume.trim() || undefined,
+          jobDescription: jobDescription.trim() || undefined,
+          candidateAnalysis: candidateAnalysis.trim() || undefined
         })
       })
       
@@ -479,6 +490,74 @@ export default function NewPracticePage() {
                     Situational
                   </label>
                 </div>
+              </div>
+
+              {/* Advanced Section */}
+              <div className="border border-gray-200 rounded-lg">
+                <button
+                  type="button"
+                  onClick={() => setShowAdvanced(!showAdvanced)}
+                  className="w-full px-4 py-3 text-left flex items-center justify-between hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-inset"
+                >
+                  <span className="text-sm font-medium text-gray-700">Advanced Options</span>
+                  <ChevronDown 
+                    className={`w-4 h-4 text-gray-500 transition-transform duration-200 ${
+                      showAdvanced ? 'rotate-180' : ''
+                    }`} 
+                  />
+                </button>
+                
+                {showAdvanced && (
+                  <div className="px-4 pb-4 space-y-4 border-t border-gray-200">
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">
+                        Resume/Background (Optional)
+                      </label>
+                      <textarea
+                        value={resume}
+                        onChange={(e) => setResume(e.target.value)}
+                        placeholder="Paste your resume or describe your background..."
+                        className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-none"
+                        rows={3}
+                      />
+                      <p className="mt-1 text-xs text-gray-500">
+                        This helps generate more relevant questions based on your experience
+                      </p>
+                    </div>
+
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">
+                        Job Description (Optional)
+                      </label>
+                      <textarea
+                        value={jobDescription}
+                        onChange={(e) => setJobDescription(e.target.value)}
+                        placeholder="Paste the job description or role requirements..."
+                        className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-none"
+                        rows={3}
+                      />
+                      <p className="mt-1 text-xs text-gray-500">
+                        This helps tailor questions to the specific role you're interviewing for
+                      </p>
+                    </div>
+
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">
+                        Expected Interview Topics (Optional)
+                      </label>
+                      <textarea
+                        value={candidateAnalysis}
+                        onChange={(e) => setCandidateAnalysis(e.target.value)}
+                        placeholder="What topics do you expect to be asked about? Any specific areas you want to focus on?"
+                        className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-none"
+                        rows={3}
+                      />
+                      <p className="mt-1 text-xs text-gray-500">
+                        Your analysis of what topics are typically asked in this type of interview
+                      </p>
+                    </div>
+                  </div>
+                )}
               </div>
 
               <button

@@ -272,7 +272,16 @@ Do NOT include any other text or formatting. Only return the JSON object.`
 };
 
 // Function to get the appropriate prompt based on question type
-export function getQuestionPrompt(type: string, count: number, subject: string): string {
+export function getQuestionPrompt(
+  type: string, 
+  count: number, 
+  subject: string, 
+  context?: {
+    resume?: string
+    jobDescription?: string
+    candidateAnalysis?: string
+  }
+): string {
   const prompt = questionPrompts[type as keyof typeof questionPrompts];
   if (!prompt) {
     // Fallback to behavioral if type not found
@@ -281,9 +290,39 @@ export function getQuestionPrompt(type: string, count: number, subject: string):
       .replace('{subject}', subject);
   }
   
-  return prompt.generator
+  let finalPrompt = prompt.generator
     .replace('{count}', count.toString())
     .replace('{subject}', subject);
+
+  // Add context information if provided
+  if (context && (context.resume || context.jobDescription || context.candidateAnalysis)) {
+    const contextSection = `
+ADDITIONAL CONTEXT FOR PERSONALIZED QUESTIONS:
+
+${context.resume ? `CANDIDATE'S RESUME/BACKGROUND:
+${context.resume}
+
+` : ''}${context.jobDescription ? `JOB DESCRIPTION:
+${context.jobDescription}
+
+` : ''}${context.candidateAnalysis ? `CANDIDATE'S ANALYSIS OF EXPECTED TOPICS:
+${context.candidateAnalysis}
+
+` : ''}IMPORTANT: Use this context to generate more relevant and personalized questions. Reference specific experiences, skills, or requirements mentioned in the resume and job description. Focus on areas that align with the candidate's background and the role requirements.
+
+`;
+
+    // Insert context after the initial description but before the requirements
+    const insertIndex = finalPrompt.indexOf('Generate questions that ask candidates to:');
+    if (insertIndex !== -1) {
+      finalPrompt = finalPrompt.slice(0, insertIndex) + contextSection + finalPrompt.slice(insertIndex);
+    } else {
+      // If we can't find the insertion point, add context at the beginning
+      finalPrompt = contextSection + finalPrompt;
+    }
+  }
+  
+  return finalPrompt;
 }
 
 // Function to get the appropriate evaluation prompt based on question type

@@ -4,7 +4,14 @@ import { insertQuestion, Question, createTables } from '../../../../lib/db'
 
 export async function POST(request: NextRequest) {
   try {
-    const { subject, count = 5, types = ['behavioral', 'technical', 'situational'] } = await request.json()
+    const { 
+      subject, 
+      count = 5, 
+      types = ['behavioral', 'technical', 'situational'],
+      resume,
+      jobDescription,
+      candidateAnalysis
+    } = await request.json()
 
     if (!subject) {
       return NextResponse.json(
@@ -33,8 +40,12 @@ export async function POST(request: NextRequest) {
       // Continue without database storage
     }
 
-    // Generate questions using Groq
-    const questions = await generateQuestions(subject, count, types)
+    // Generate questions using Groq with advanced context
+    const questions = await generateQuestions(subject, count, types, {
+      resume,
+      jobDescription,
+      candidateAnalysis
+    })
     console.log('Generated questions:', questions)
 
     // Store questions in database
