@@ -8,7 +8,7 @@ const groq = new Groq({
 export interface Question {
   id: string
   question: string
-  type: string
+  type: 'behavioral' | 'technical' | 'situational' | 'coding'
   category: string
 }
 
@@ -28,6 +28,62 @@ export interface Evaluation {
   }
 }
 
+// Helper: Normalize and validate question type
+const VALID_TYPES = ['behavioral', 'technical', 'situational', 'coding'] as const;
+type ValidType = typeof VALID_TYPES[number];
+function normalizeType(type: any, fallback: ValidType): ValidType {
+  if (typeof type !== 'string') return fallback;
+  const normalized = type.trim().toLowerCase();
+  if (VALID_TYPES.includes(normalized as ValidType)) {
+    return normalized as ValidType;
+  }
+  return fallback;
+}
+
+// Helper: Robust JSON parsing that handles common formatting issues
+function parseJSONSafely(jsonString: string): any {
+  try {
+    // First try direct parsing
+    return JSON.parse(jsonString);
+  } catch (error) {
+    console.log('Direct JSON parsing failed, attempting cleanup...');
+    
+    // Clean up common JSON issues
+    let cleaned = jsonString
+      // Remove trailing commas before closing brackets/braces
+      .replace(/,(\s*[}\]])/g, '$1')
+      // Remove trailing commas in objects
+      .replace(/,(\s*})/g, '$1')
+      // Remove trailing commas in arrays
+      .replace(/,(\s*\])/g, '$1')
+      // Fix common quote issues
+      .replace(/[\u2018\u2019]/g, "'")
+      .replace(/[\u201C\u201D]/g, '"')
+      // Remove any non-printable characters
+      .replace(/[\x00-\x1F\x7F-\x9F]/g, '')
+      // Trim whitespace
+      .trim();
+    
+    try {
+      return JSON.parse(cleaned);
+    } catch (secondError) {
+      console.log('Cleaned JSON parsing also failed:', secondError);
+      
+      // Try to extract just the array part
+      const arrayMatch = cleaned.match(/\[[\s\S]*\]/);
+      if (arrayMatch) {
+        try {
+          return JSON.parse(arrayMatch[0]);
+        } catch (thirdError) {
+          console.log('Array extraction parsing failed:', thirdError);
+        }
+      }
+      
+      throw new Error('All JSON parsing attempts failed');
+    }
+  }
+}
+
 export async function generateQuestions(
   subject: string,
   count: number,
@@ -36,8 +92,7 @@ export async function generateQuestions(
   try {
     console.log(`Generating questions for subject: ${subject} count: ${count} types:`, selectedTypes)
     
-    // Use the first selected type for now (can be enhanced to generate mixed types)
-    const questionType = selectedTypes[0] || 'behavioral'
+    const questionType = normalizeType(selectedTypes[0], 'behavioral');
     const prompt = getQuestionPrompt(questionType, count, subject)
     
     const completion = await groq.chat.completions.create({
@@ -50,6 +105,7 @@ export async function generateQuestions(
       model: 'llama-3.1-8b-instant',
       temperature: 0.7,
       max_tokens: 2000,
+      response_format: { type: "json_object" }
     })
 
     const response = completion.choices[0]?.message?.content || ''
@@ -58,19 +114,18 @@ export async function generateQuestions(
     // Try to parse the JSON response
     let questions: Question[] = []
     try {
-      questions = JSON.parse(response)
-    } catch (error) {
-      console.log('Failed to parse JSON, trying to extract JSON from response:', error)
+      const parsedResponse = parseJSONSafely(response)
       
-      // Try to extract JSON from the response
-      const jsonMatch = response.match(/\[[\s\S]*\]/)
-      if (jsonMatch) {
-        try {
-          questions = JSON.parse(jsonMatch[0])
-        } catch (secondError) {
-          console.log('Failed to parse cleaned JSON:', secondError)
-        }
-      }
+      // Extract questions from the JSON object response
+      const parsedQuestions = parsedResponse.questions || parsedResponse
+      
+      // Validate and fix question types
+      questions = parsedQuestions.map((q: any) => ({
+        ...q,
+        type: normalizeType(q.type, questionType),
+      }))
+    } catch (error) {
+      console.log('Failed to parse JSON with robust parser:', error)
       
       // If still no success, create fallback questions
       if (!questions || questions.length === 0) {
@@ -90,10 +145,11 @@ export async function generateQuestions(
     console.error('Error generating questions:', error)
     
     // Return fallback questions
+    const questionType = normalizeType(selectedTypes[0], 'behavioral');
     return Array.from({ length: count }, (_, i) => ({
       id: (i + 1).toString(),
       question: `Sample ${subject} question ${i + 1}`,
-      type: selectedTypes[0] || 'behavioral',
+      type: questionType,
       category: subject
     }))
   }
@@ -121,6 +177,7 @@ export async function evaluateResponse(
       model: 'llama-3.1-8b-instant',
       temperature: 0.3,
       max_tokens: 1000,
+      response_format: { type: "json_object" }
     })
 
     const responseText = completion.choices[0]?.message?.content || ''
@@ -128,7 +185,7 @@ export async function evaluateResponse(
 
     // Try to parse the JSON response
     try {
-      const evaluation = JSON.parse(responseText)
+      const evaluation = parseJSONSafely(responseText)
       return evaluation
     } catch (error) {
       console.error('Failed to parse evaluation response:', error)

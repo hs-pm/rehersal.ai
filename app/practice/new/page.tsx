@@ -61,6 +61,12 @@ export default function NewPracticePage() {
   const [evaluation, setEvaluation] = useState<Evaluation | null>(null)
   const [showResults, setShowResults] = useState(false)
   const [sessionComplete, setSessionComplete] = useState(false)
+  
+  // Clarifying question state
+  const [clarifyingQuestion, setClarifyingQuestion] = useState('')
+  const [guidance, setGuidance] = useState('')
+  const [showGuidance, setShowGuidance] = useState(false)
+  const [loadingGuidance, setLoadingGuidance] = useState(false)
 
   // Speech recognition states
   const [isListening, setIsListening] = useState(false)
@@ -320,6 +326,11 @@ export default function NewPracticePage() {
         return
       }
 
+      // Include clarifying question in the response context if it exists
+      const responseContext = clarifyingQuestion.trim() 
+        ? `Clarifying Question: "${clarifyingQuestion}"\n\nFinal Response: ${finalResponse}`
+        : finalResponse
+
       const response = await fetch('/api/responses/evaluate', {
         method: 'POST',
         headers: {
@@ -329,7 +340,7 @@ export default function NewPracticePage() {
           sessionId,
           questionId: questions[currentQuestionIndex].id,
           questionText: questions[currentQuestionIndex].question,
-          textResponse: finalResponse,
+          textResponse: responseContext,
           videoUrl: recordedVideo,
         }),
       })
@@ -349,6 +360,10 @@ export default function NewPracticePage() {
         setInterimTranscript('')
         setRecordedVideo(null)
         setEvaluation(null)
+        // Reset clarifying question state
+        setClarifyingQuestion('')
+        setGuidance('')
+        setShowGuidance(false)
       } else {
         setSessionComplete(true)
         setShowResults(true)
@@ -358,6 +373,40 @@ export default function NewPracticePage() {
       alert('Failed to submit response. Please try again.')
     } finally {
       setSubmitting(false)
+    }
+  }
+
+  const handleAskClarification = async () => {
+    if (!clarifyingQuestion.trim()) {
+      alert('Please enter a clarifying question')
+      return
+    }
+
+    setLoadingGuidance(true)
+    try {
+      const response = await fetch('/api/clarification', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          clarifyingQuestion: clarifyingQuestion.trim(),
+          interviewQuestion: questions[currentQuestionIndex].question,
+        }),
+      })
+
+      if (!response.ok) {
+        throw new Error('Failed to get guidance')
+      }
+
+      const data = await response.json()
+      setGuidance(data.guidance)
+      setShowGuidance(true)
+    } catch (error) {
+      console.error('Error getting clarification guidance:', error)
+      alert('Failed to get guidance. Please try again.')
+    } finally {
+      setLoadingGuidance(false)
     }
   }
 
@@ -599,6 +648,64 @@ export default function NewPracticePage() {
                   className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-none"
                   rows={4}
                 />
+              </div>
+
+              {/* Ask Clarifying Question Section */}
+              <div className="mb-4 p-4 bg-blue-50 border border-blue-200 rounded-lg">
+                <h4 className="font-medium text-gray-700 mb-3 flex items-center">
+                  <svg className="w-4 h-4 mr-2 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8.228 9c.549-1.165 2.03-2 3.772-2 2.21 0 4 1.343 4 3 0 1.4-1.278 2.575-3.006 2.907-.542.104-.994.54-.994 1.093m0 3h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                  </svg>
+                  Need Help? Ask a Clarifying Question
+                </h4>
+                
+                <div className="space-y-3">
+                  <textarea
+                    value={clarifyingQuestion}
+                    onChange={(e) => setClarifyingQuestion(e.target.value)}
+                    placeholder="Ask a clarifying question to get guidance on how to approach this question..."
+                    className="w-full p-3 border border-blue-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-none text-sm"
+                    rows={2}
+                  />
+                  
+                  <button
+                    onClick={handleAskClarification}
+                    disabled={loadingGuidance || !clarifyingQuestion.trim()}
+                    className="btn-secondary flex items-center justify-center text-sm"
+                  >
+                    {loadingGuidance ? (
+                      <>
+                        <Loader2 className="animate-spin mr-2" size={16} />
+                        Getting Guidance...
+                      </>
+                    ) : (
+                      <>
+                        <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                        </svg>
+                        Ask for Guidance
+                      </>
+                    )}
+                  </button>
+                </div>
+
+                {/* Guidance Display */}
+                {showGuidance && guidance && (
+                  <div className="mt-4 p-3 bg-white border border-blue-300 rounded-lg">
+                    <div className="flex items-center justify-between mb-2">
+                      <h5 className="font-medium text-gray-700 text-sm">AI Guidance</h5>
+                      <button
+                        onClick={() => setShowGuidance(false)}
+                        className="text-gray-400 hover:text-gray-600 text-sm"
+                      >
+                        Hide
+                      </button>
+                    </div>
+                    <div className="text-sm text-gray-700 leading-relaxed">
+                      {guidance}
+                    </div>
+                  </div>
+                )}
               </div>
 
               {/* Video Recording Section */}

@@ -17,13 +17,15 @@ Generate questions that ask candidates to:
 - Share outcomes and lessons learned
 - Demonstrate their approach to challenges
 
-Return ONLY a valid JSON array with this exact structure:
-[
-  {"id": "1", "question": "Your behavioral question here", "type": "behavioral", "category": "subject"},
-  {"id": "2", "question": "Your behavioral question here", "type": "behavioral", "category": "subject"}
-]
+Return ONLY a valid JSON object with this exact structure:
+{
+  "questions": [
+    {"id": "1", "question": "Your behavioral question here", "type": "behavioral", "category": "subject"},
+    {"id": "2", "question": "Your behavioral question here", "type": "behavioral", "category": "subject"}
+  ]
+}
 
-Do NOT include any other text, formatting, or explanations. Only return the JSON array.`,
+Do NOT include any other text, formatting, or explanations. Only return the JSON object.`,
 
     evaluator: `You are evaluating a behavioral interview response. Assess the candidate's answer based on the following criteria:
 
@@ -65,27 +67,37 @@ Do NOT include any other text or formatting. Only return the JSON object.`
   technical: {
     generator: `You are an expert technical interviewer. Generate {count} high-quality technical interview questions for the subject "{subject}".
 
+IMPORTANT: These must be TECHNICAL questions, NOT behavioral questions. Do NOT ask about past experiences, teamwork, or personal situations.
+
 Technical questions should:
-- Test theoretical knowledge and understanding
-- Assess problem-solving abilities
-- Cover fundamental concepts and advanced topics
+- Test theoretical knowledge and understanding of concepts
+- Assess problem-solving abilities with technical scenarios
+- Cover fundamental concepts, principles, and advanced topics
 - Be appropriate for the subject area
-- Encourage detailed technical explanations
+- Ask for explanations, comparisons, or technical solutions
 
 Generate questions that ask candidates to:
-- Explain technical concepts and principles
-- Compare different approaches or technologies
-- Describe technical processes and methodologies
-- Demonstrate understanding of best practices
-- Discuss trade-offs and considerations
+- Explain technical concepts, principles, and mechanisms
+- Compare different approaches, technologies, or methodologies
+- Describe technical processes, algorithms, or architectures
+- Demonstrate understanding of best practices and trade-offs
+- Solve technical problems or design technical solutions
 
-Return ONLY a valid JSON array with this exact structure:
-[
-  {"id": "1", "question": "Your technical question here", "type": "technical", "category": "subject"},
-  {"id": "2", "question": "Your technical question here", "type": "technical", "category": "subject"}
-]
+Examples of technical questions:
+- "What is the difference between X and Y in JavaScript?"
+- "How would you optimize this algorithm?"
+- "Explain the concept of closures in JavaScript"
+- "What are the trade-offs between different data structures?"
 
-Do NOT include any other text, formatting, or explanations. Only return the JSON array.`,
+Return ONLY a valid JSON object with this exact structure:
+{
+  "questions": [
+    {"id": "1", "question": "Your technical question here", "type": "technical", "category": "subject"},
+    {"id": "2", "question": "Your technical question here", "type": "technical", "category": "subject"}
+  ]
+}
+
+Do NOT include any other text, formatting, or explanations. Only return the JSON object.`,
 
     evaluator: `You are evaluating a technical interview response. Assess the candidate's answer based on the following criteria:
 
@@ -141,13 +153,15 @@ Generate questions that ask candidates to:
 - Plan and prioritize actions
 - Anticipate challenges and solutions
 
-Return ONLY a valid JSON array with this exact structure:
-[
-  {"id": "1", "question": "Your situational question here", "type": "situational", "category": "subject"},
-  {"id": "2", "question": "Your situational question here", "type": "situational", "category": "subject"}
-]
+Return ONLY a valid JSON object with this exact structure:
+{
+  "questions": [
+    {"id": "1", "question": "Your situational question here", "type": "situational", "category": "subject"},
+    {"id": "2", "question": "Your situational question here", "type": "situational", "category": "subject"}
+  ]
+}
 
-Do NOT include any other text, formatting, or explanations. Only return the JSON array.`,
+Do NOT include any other text, formatting, or explanations. Only return the JSON object.`,
 
     evaluator: `You are evaluating a situational interview response. Assess the candidate's answer based on the following criteria:
 
@@ -190,42 +204,50 @@ Do NOT include any other text or formatting. Only return the JSON object.`
     generator: `You are an expert coding interviewer. Generate {count} high-quality coding interview questions for the subject "{subject}".
 
 Coding questions should:
-- Test programming skills and problem-solving abilities
-- Be appropriate for the subject area (SQL, Python, JavaScript, etc.)
-- Range from basic to intermediate difficulty
-- Focus on practical coding scenarios
-- Encourage clear, efficient solutions
+- Test practical programming skills and problem-solving abilities
+- Ask candidates to write actual code or pseudocode
+- Cover fundamental programming concepts and algorithms
+- Be appropriate for the subject area and skill level
+- Encourage logical thinking and code organization
 
 Generate questions that ask candidates to:
 - Write code to solve specific problems
 - Implement algorithms or data structures
-- Optimize existing code or queries
-- Debug and troubleshoot issues
-- Explain their coding approach and decisions
+- Debug or optimize existing code
+- Design solutions to programming challenges
+- Explain their coding approach and reasoning
 
-Return ONLY a valid JSON array with this exact structure:
-[
-  {"id": "1", "question": "Your coding question here", "type": "coding", "category": "subject"},
-  {"id": "2", "question": "Your coding question here", "type": "coding", "category": "subject"}
-]
+Examples of coding questions:
+- "Write a function to reverse a string"
+- "Implement a binary search algorithm"
+- "Create a class to represent a linked list"
+- "Write SQL queries to retrieve specific data"
 
-Do NOT include any other text, formatting, or explanations. Only return the JSON array.`,
+Return ONLY a valid JSON object with this exact structure:
+{
+  "questions": [
+    {"id": "1", "question": "Your coding question here", "type": "coding", "category": "subject"},
+    {"id": "2", "question": "Your coding question here", "type": "coding", "category": "subject"}
+  ]
+}
+
+Do NOT include any other text, formatting, or explanations. Only return the JSON object.`,
 
     evaluator: `You are evaluating a coding interview response. Assess the candidate's answer based on the following criteria:
 
 **Evaluation Criteria:**
-- **Code Quality**: Is the code correct, efficient, and well-structured?
-- **Problem Understanding**: Does the response show clear understanding of the requirements?
-- **Solution Approach**: Is the approach logical and appropriate for the problem?
-- **Code Readability**: Is the code clear, well-commented, and maintainable?
-- **Technical Knowledge**: Does the response demonstrate solid programming skills?
+- **Code Quality**: Is the code well-structured, readable, and follows best practices?
+- **Correctness**: Does the solution work correctly for the given problem?
+- **Efficiency**: Is the solution optimized and performant?
+- **Problem Understanding**: Does the candidate understand the requirements?
+- **Communication**: Can the candidate explain their approach clearly?
 
 **Scoring Guide:**
-- 90-100: Excellent code quality, perfect problem understanding, optimal approach, highly readable code
-- 80-89: Good code quality, clear problem understanding, solid approach, readable code
-- 70-79: Adequate code quality, basic problem understanding, reasonable approach, somewhat readable code
-- 60-69: Poor code quality, limited problem understanding, weak approach, unclear code
-- Below 60: Incorrect code, poor problem understanding, inappropriate approach, unreadable code
+- 90-100: Excellent code quality, correct solution, efficient implementation, clear understanding, excellent communication
+- 80-89: Good code quality, mostly correct, reasonable efficiency, good understanding, clear explanation
+- 70-79: Adequate code quality, mostly correct, acceptable efficiency, basic understanding, understandable explanation
+- 60-69: Poor code quality, some errors, inefficient solution, limited understanding, unclear explanation
+- Below 60: Very poor code quality, significant errors, inefficient solution, poor understanding, poor communication
 
 **Response Format:**
 Return ONLY a valid JSON object with this exact structure:

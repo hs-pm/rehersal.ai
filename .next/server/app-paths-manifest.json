@@ -1,4 +1,7 @@
 {
-  "/not-found": "app/not-found.js",
+  "/practice/new/page": "app/practice/new/page.js",
+  "/api/responses/evaluate/route": "app/api/responses/evaluate/route.js",
+  "/api/questions/generate/route": "app/api/questions/generate/route.js",
+  "/api/clarification/route": "app/api/clarification/route.js",
   "/page": "app/page.js"
 }
