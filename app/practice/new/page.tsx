@@ -82,6 +82,7 @@ export default function NewPracticePage() {
   const [interimTranscript, setInterimTranscript] = useState('')
   const [speechSupported, setSpeechSupported] = useState(false)
   const [speechError, setSpeechError] = useState<string | null>(null)
+  const [showTranscript, setShowTranscript] = useState(false)
 
   // Refs for video recording
   const webcamRef = useRef<Webcam>(null)
@@ -593,28 +594,10 @@ export default function NewPracticePage() {
 
   return (
     <div className="min-h-screen bg-gray-50 py-6">
-      <div className="w-full px-4 sm:px-6 lg:px-8">
-        {/* Progress Bar */}
-        <div className="mb-6 max-w-7xl mx-auto">
-          <div className="flex justify-between items-center mb-2">
-            <span className="text-sm text-gray-600">
-              Question {currentQuestionIndex + 1} of {questions.length}
-            </span>
-            <span className="text-sm text-gray-600">
-              {Math.round(((currentQuestionIndex + 1) / questions.length) * 100)}% Complete
-            </span>
-          </div>
-          <div className="w-full bg-gray-200 rounded-full h-2">
-            <div 
-              className="bg-primary-600 h-2 rounded-full transition-all duration-300"
-              style={{ width: `${((currentQuestionIndex + 1) / questions.length) * 100}%` }}
-            />
-          </div>
-        </div>
-
-        <div className="max-w-7xl mx-auto space-y-6">
+      <div className="w-full px-2 sm:px-4 lg:px-6">
+        <div className="w-full space-y-6">
           {/* Question Section - Full Width */}
-          <div className="bg-white rounded-lg shadow-md p-6 lg:p-8">
+          <div className="bg-white rounded-lg shadow-md p-4 sm:p-6 lg:p-8">
             <div className="flex items-center justify-between mb-4">
               <span className={`px-3 py-1 rounded-full text-sm font-medium ${
                 currentQuestion.type === 'behavioral' ? 'bg-blue-100 text-blue-800' :
@@ -625,10 +608,21 @@ export default function NewPracticePage() {
               }`}>
                 {currentQuestion.type.charAt(0).toUpperCase() + currentQuestion.type.slice(1)}
               </span>
-              <span className="text-sm text-gray-500">{currentQuestion.category}</span>
+              <div className="flex items-center space-x-3">
+                <span className="text-sm text-gray-500">{currentQuestion.category}</span>
+                <div className="flex items-center space-x-2 text-xs text-gray-500">
+                  <span>{currentQuestionIndex + 1}/{questions.length}</span>
+                  <div className="w-16 h-1.5 bg-gray-200 rounded-full">
+                    <div 
+                      className="bg-blue-500 h-1.5 rounded-full transition-all duration-300"
+                      style={{ width: `${((currentQuestionIndex + 1) / questions.length) * 100}%` }}
+                    />
+                  </div>
+                </div>
+              </div>
             </div>
             
-            <h2 className="text-xl lg:text-2xl font-semibold text-gray-900 leading-relaxed mb-4">
+            <h2 className="text-sm lg:text-base xl:text-lg font-semibold text-gray-900 leading-relaxed mb-4 max-w-none">
               {currentQuestion.question}
             </h2>
 
@@ -708,126 +702,136 @@ export default function NewPracticePage() {
 
           {/* Response Section - Full Width */}
           <div className="bg-white rounded-lg shadow-md p-6 lg:p-8 space-y-6">
-            <h3 className="text-lg font-semibold text-gray-900">Your Response</h3>
-            
-            {/* Recording Controls Row */}
-            <div className="flex flex-col sm:flex-row gap-4">
-              {/* Voice Input Button */}
-              {speechSupported && (
-                <div className="flex-1">
-                  <div className="p-4 bg-gray-50 rounded-lg border-2 border-dashed border-gray-200 hover:border-blue-300 transition-colors">
-                    <div className="flex items-center justify-between mb-3">
-                      <h4 className="font-medium text-gray-700">Voice Input</h4>
-                      <div className="flex items-center space-x-2">
-                        {isListening && (
-                          <div className="flex items-center space-x-1">
-                            <div className="w-2 h-2 bg-red-500 rounded-full animate-pulse"></div>
-                            <span className="text-sm text-red-600">Listening...</span>
-                          </div>
-                        )}
-                        {speechError && (
-                          <span className="text-sm text-red-600">{speechError}</span>
-                        )}
-                      </div>
-                    </div>
-                    
-                    <div className="flex items-center space-x-3 mb-3">
+            {/* Recording Controls Row - Horizontal Ribbon */}
+            <div className="bg-gray-50 rounded-lg border border-gray-200 p-4">
+              <div className="flex flex-col sm:flex-row gap-3">
+                {/* Voice Input Button - Compact */}
+                {speechSupported && (
+                  <div className="flex-1">
+                    <div className="flex items-center space-x-3 p-3 bg-white rounded-lg border border-gray-200 hover:border-blue-300 transition-colors">
                       <button
                         onClick={isListening ? stopListening : startListening}
-                        className={`p-4 rounded-full transition-colors shadow-lg ${
+                        className={`p-3 rounded-full transition-colors shadow-md flex-shrink-0 ${
                           isListening 
                             ? 'bg-red-500 text-white hover:bg-red-600' 
                             : 'bg-blue-500 text-white hover:bg-blue-600'
                         }`}
                         disabled={!speechSupported}
                       >
-                        {isListening ? <VolumeX size={24} /> : <Volume2 size={24} />}
+                        {isListening ? <VolumeX size={20} /> : <Volume2 size={20} />}
                       </button>
-                      <span className="text-sm text-gray-600">
-                        {isListening ? 'Click to stop recording' : 'Click to start voice response'}
-                      </span>
+                      
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center justify-between mb-1">
+                          <span className="text-sm font-medium text-gray-700">Voice Input</span>
+                          {isListening && (
+                            <div className="flex items-center space-x-1">
+                              <div className="w-2 h-2 bg-red-500 rounded-full animate-pulse"></div>
+                              <span className="text-xs text-red-600">Listening</span>
+                            </div>
+                          )}
+                        </div>
+                        <span className="text-xs text-gray-500">
+                          {isListening ? 'Click to stop' : 'Click to start voice response'}
+                        </span>
+                      </div>
+                      
                       {transcript && (
                         <button
                           onClick={clearTranscript}
-                          className="text-sm text-gray-500 hover:text-gray-700"
+                          className="text-xs text-gray-500 hover:text-gray-700 px-2 py-1 rounded"
                         >
                           Clear
                         </button>
                       )}
                     </div>
-
-                    {/* Transcript Display */}
+                    
+                    {/* Compact Transcript Display */}
                     {transcript && (
-                      <div className="mb-3">
-                        <div className="text-sm text-gray-600 mb-1">Live Transcript:</div>
-                        <div className="p-3 bg-white border rounded-lg text-gray-800 max-h-32 overflow-y-auto">
-                          {transcript}
-                          {interimTranscript && (
-                            <span className="text-gray-400 italic">
-                              {interimTranscript}
-                            </span>
-                          )}
+                      <div className="mt-2">
+                        <div className="flex items-center justify-between mb-1">
+                          <div className="text-xs text-gray-600">Live Transcript:</div>
+                          <button
+                            onClick={() => setShowTranscript(!showTranscript)}
+                            className="text-xs text-blue-600 hover:text-blue-800 flex items-center space-x-1"
+                          >
+                            <span>{showTranscript ? 'Hide' : 'Show'}</span>
+                            <svg
+                              className={`w-3 h-3 transition-transform ${showTranscript ? 'rotate-180' : ''}`}
+                              fill="none"
+                              stroke="currentColor"
+                              viewBox="0 0 24 24"
+                            >
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                            </svg>
+                          </button>
                         </div>
+                        {showTranscript && (
+                          <div className="p-2 bg-white border rounded text-xs text-gray-800 max-h-20 overflow-y-auto">
+                            {transcript}
+                            {interimTranscript && (
+                              <span className="text-gray-400 italic">
+                                {interimTranscript}
+                              </span>
+                            )}
+                          </div>
+                        )}
                       </div>
                     )}
                   </div>
-                </div>
-              )}
+                )}
 
-              {/* Video Recording Button */}
-              <div className="flex-1">
-                <div className="p-4 bg-gray-50 rounded-lg border-2 border-dashed border-gray-200 hover:border-green-300 transition-colors">
-                  <div className="flex items-center justify-between mb-3">
-                    <h4 className="font-medium text-gray-700">Video Recording</h4>
-                    {isVideoRecording && (
-                      <div className="flex items-center space-x-1">
-                        <div className="w-2 h-2 bg-red-500 rounded-full animate-pulse"></div>
-                        <span className="text-sm text-red-600">Recording...</span>
-                      </div>
-                    )}
-                  </div>
-                  
-                  <div className="flex items-center space-x-3 mb-3">
+                {/* Video Recording Button - Compact */}
+                <div className="flex-1">
+                  <div className="flex items-center space-x-3 p-3 bg-white rounded-lg border border-gray-200 hover:border-green-300 transition-colors">
                     <button
                       onClick={showCamera ? stopVideoRecording : startVideoRecording}
-                      className={`p-4 rounded-full transition-colors shadow-lg ${
+                      className={`p-3 rounded-full transition-colors shadow-md flex-shrink-0 ${
                         isVideoRecording 
                           ? 'bg-red-500 text-white hover:bg-red-600' 
                           : 'bg-green-500 text-white hover:bg-green-600'
                       }`}
                     >
-                      {isVideoRecording ? <Square size={24} /> : <Video size={24} />}
+                      {isVideoRecording ? <Square size={20} /> : <Video size={20} />}
                     </button>
-                    <span className="text-sm text-gray-600">
-                      {isVideoRecording ? 'Recording... Click to stop' : 'Record video response'}
-                    </span>
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            {/* Browser Support Warning */}
-            {!speechSupported && (
-              <div className="p-4 bg-yellow-50 border border-yellow-200 rounded-lg">
-                <div className="flex items-start">
-                  <div className="flex-shrink-0">
-                    <svg className="h-5 w-5 text-yellow-400" viewBox="0 0 20 20" fill="currentColor">
-                      <path fillRule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
-                    </svg>
-                  </div>
-                  <div className="ml-3">
-                    <h3 className="text-sm font-medium text-yellow-800">
-                      Voice Response Not Available
-                    </h3>
-                    <div className="mt-2 text-sm text-yellow-700">
-                      <p>
-                        Your browser doesn't support voice recognition. Please use Chrome, Edge, or Safari for voice response functionality.
-                      </p>
+                    
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center justify-between mb-1">
+                        <span className="text-sm font-medium text-gray-700">Video Recording</span>
+                        {isVideoRecording && (
+                          <div className="flex items-center space-x-1">
+                            <div className="w-2 h-2 bg-red-500 rounded-full animate-pulse"></div>
+                            <span className="text-xs text-red-600">Recording</span>
+                          </div>
+                        )}
+                      </div>
+                      <span className="text-xs text-gray-500">
+                        {isVideoRecording ? 'Click to stop' : 'Record video response'}
+                      </span>
                     </div>
                   </div>
                 </div>
               </div>
-            )}
+
+              {/* Speech Error Display */}
+              {speechError && (
+                <div className="mt-2 p-2 bg-red-50 border border-red-200 rounded text-xs text-red-600">
+                  {speechError}
+                </div>
+              )}
+
+              {/* Browser Support Warning - Compact */}
+              {!speechSupported && (
+                <div className="mt-2 p-2 bg-yellow-50 border border-yellow-200 rounded text-xs text-yellow-700">
+                  <div className="flex items-center space-x-2">
+                    <svg className="h-4 w-4 text-yellow-500 flex-shrink-0" viewBox="0 0 20 20" fill="currentColor">
+                      <path fillRule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
+                    </svg>
+                    <span>Voice input not available. Use Chrome, Edge, or Safari for voice response.</span>
+                  </div>
+                </div>
+              )}
+            </div>
 
             {/* Video Preview Area - Large when active */}
             {(showCamera || recordedVideo) && (
@@ -836,7 +840,7 @@ export default function NewPracticePage() {
                   <div className="relative">
                     <Webcam
                       ref={webcamRef}
-                      className="w-full h-auto max-h-96 object-cover"
+                      className="w-full h-auto object-contain"
                       videoConstraints={{
                         width: 1280,
                         height: 720,
@@ -851,7 +855,7 @@ export default function NewPracticePage() {
                     <video
                       src={recordedVideo}
                       controls
-                      className="w-full h-auto max-h-96 object-cover"
+                      className="w-full h-auto object-contain"
                       onPlay={() => setIsPlaying(true)}
                       onPause={() => setIsPlaying(false)}
                       onEnded={() => setIsPlaying(false)}
@@ -861,18 +865,7 @@ export default function NewPracticePage() {
               </div>
             )}
 
-            {/* Video Preview Placeholder */}
-            {!showCamera && !recordedVideo && (
-              <div className="relative bg-gray-900 rounded-lg overflow-hidden h-48 flex items-center justify-center">
-                <div className="text-gray-400 text-center">
-                  <Video className="w-12 h-12 mx-auto mb-2" />
-                  <p>Video recording will appear here</p>
-                  <p className="text-sm mt-1">Click the video button to start recording</p>
-                </div>
-              </div>
-            )}
-
-            {/* Text Input Area - Auto-expanding */}
+            {/* Text Input Area - Reduced vertical size */}
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">
                 Text Response {speechSupported && '(or use voice above)'}
@@ -881,9 +874,9 @@ export default function NewPracticePage() {
                 value={textResponse}
                 onChange={(e) => setTextResponse(e.target.value)}
                 placeholder="Type your response here... You can also use voice input or video recording above."
-                className="w-full p-4 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-none transition-all duration-200"
-                rows={Math.max(4, Math.min(12, textResponse.split('\n').length + 2))}
-                style={{ minHeight: '120px', maxHeight: '400px' }}
+                className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-none transition-all duration-200"
+                rows={Math.max(2, Math.min(6, textResponse.split('\n').length + 1))}
+                style={{ minHeight: '60px', maxHeight: '160px' }}
               />
               <div className="flex justify-between items-center mt-2 text-sm text-gray-500">
                 <span>{textResponse.length} characters</span>
