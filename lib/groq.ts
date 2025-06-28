@@ -163,10 +163,15 @@ export async function generateQuestions(
 export async function evaluateResponse(
   question: string,
   response: string,
-  questionType: string = 'behavioral'
+  questionType: string = 'behavioral',
+  context?: {
+    resume?: string
+    jobDescription?: string
+    candidateAnalysis?: string
+  }
 ): Promise<Evaluation> {
   try {
-    const prompt = getEvaluationPrompt(questionType)
+    const prompt = getEvaluationPrompt(questionType, context)
     
     const completion = await groq.chat.completions.create({
       messages: [

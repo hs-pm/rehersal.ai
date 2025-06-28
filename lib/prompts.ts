@@ -1,5 +1,102 @@
 // Type-specific prompts for question generation and evaluation
 
+// Context analysis and processing functions
+export function analyzeResume(resume: string): {
+  skills: string[]
+  experience: string[]
+  projects: string[]
+  education: string[]
+} {
+  const skills: string[] = []
+  const experience: string[] = []
+  const projects: string[] = []
+  const education: string[] = []
+
+  // Simple keyword extraction - in a real implementation, this would use NLP
+  const lines = resume.toLowerCase().split('\n')
+  
+  for (const line of lines) {
+    if (line.includes('skill') || line.includes('technology') || line.includes('tool')) {
+      skills.push(line.trim())
+    } else if (line.includes('experience') || line.includes('work') || line.includes('job')) {
+      experience.push(line.trim())
+    } else if (line.includes('project') || line.includes('developed') || line.includes('built')) {
+      projects.push(line.trim())
+    } else if (line.includes('education') || line.includes('degree') || line.includes('university')) {
+      education.push(line.trim())
+    }
+  }
+
+  return { skills, experience, projects, education }
+}
+
+export function analyzeJobDescription(jobDesc: string): {
+  requirements: string[]
+  responsibilities: string[]
+  technologies: string[]
+  softSkills: string[]
+} {
+  const requirements: string[] = []
+  const responsibilities: string[] = []
+  const technologies: string[] = []
+  const softSkills: string[] = []
+
+  const lines = jobDesc.toLowerCase().split('\n')
+  
+  for (const line of lines) {
+    if (line.includes('require') || line.includes('must have') || line.includes('qualification')) {
+      requirements.push(line.trim())
+    } else if (line.includes('responsibility') || line.includes('duty') || line.includes('task')) {
+      responsibilities.push(line.trim())
+    } else if (line.includes('technology') || line.includes('tool') || line.includes('framework')) {
+      technologies.push(line.trim())
+    } else if (line.includes('communication') || line.includes('teamwork') || line.includes('leadership')) {
+      softSkills.push(line.trim())
+    }
+  }
+
+  return { requirements, responsibilities, technologies, softSkills }
+}
+
+export function generateContextSummary(context: {
+  resume?: string
+  jobDescription?: string
+  candidateAnalysis?: string
+}): string {
+  let summary = ''
+
+  if (context.resume) {
+    const resumeAnalysis = analyzeResume(context.resume)
+    summary += `CANDIDATE BACKGROUND ANALYSIS:
+- Key Skills: ${resumeAnalysis.skills.slice(0, 5).join(', ')}
+- Experience Areas: ${resumeAnalysis.experience.slice(0, 3).join(', ')}
+- Notable Projects: ${resumeAnalysis.projects.slice(0, 3).join(', ')}
+- Education: ${resumeAnalysis.education.slice(0, 2).join(', ')}
+
+`
+  }
+
+  if (context.jobDescription) {
+    const jobAnalysis = analyzeJobDescription(context.jobDescription)
+    summary += `JOB REQUIREMENTS ANALYSIS:
+- Key Requirements: ${jobAnalysis.requirements.slice(0, 5).join(', ')}
+- Main Responsibilities: ${jobAnalysis.responsibilities.slice(0, 3).join(', ')}
+- Required Technologies: ${jobAnalysis.technologies.slice(0, 5).join(', ')}
+- Soft Skills Needed: ${jobAnalysis.softSkills.slice(0, 3).join(', ')}
+
+`
+  }
+
+  if (context.candidateAnalysis) {
+    summary += `CANDIDATE'S SELF-ANALYSIS:
+${context.candidateAnalysis}
+
+`
+  }
+
+  return summary
+}
+
 export const questionPrompts = {
   behavioral: {
     generator: `You are an expert interviewer specializing in behavioral questions. Generate {count} high-quality behavioral interview questions for the subject "{subject}".
@@ -16,6 +113,15 @@ Generate questions that ask candidates to:
 - Explain their role and actions in past projects
 - Share outcomes and lessons learned
 - Demonstrate their approach to challenges
+
+{contextSection}
+
+PERSONALIZATION GUIDELINES:
+- Reference specific skills, technologies, or experiences mentioned in the candidate's background
+- Align questions with the job requirements and responsibilities
+- Focus on areas where the candidate's experience matches the role needs
+- Create questions that bridge the candidate's past experience with the target role
+- Consider the candidate's self-identified areas of focus
 
 Return ONLY a valid JSON object with this exact structure:
 {
@@ -82,6 +188,15 @@ Generate questions that ask candidates to:
 - Describe technical processes, algorithms, or architectures
 - Demonstrate understanding of best practices and trade-offs
 - Solve technical problems or design technical solutions
+
+{contextSection}
+
+PERSONALIZATION GUIDELINES:
+- Focus on technologies and skills mentioned in the candidate's background
+- Align with the technical requirements of the job description
+- Create questions that test the specific technical stack mentioned
+- Consider the candidate's experience level based on their background
+- Include questions about technologies they've worked with
 
 Examples of technical questions:
 - "What is the difference between X and Y in JavaScript?"
@@ -153,6 +268,15 @@ Generate questions that ask candidates to:
 - Plan and prioritize actions
 - Anticipate challenges and solutions
 
+{contextSection}
+
+PERSONALIZATION GUIDELINES:
+- Create scenarios that reflect the actual work environment described in the job description
+- Reference specific technologies or processes mentioned in the candidate's background
+- Align scenarios with the candidate's experience level and the role's responsibilities
+- Include situations that test the soft skills required for the position
+- Consider industry-specific challenges relevant to the candidate's background
+
 Return ONLY a valid JSON object with this exact structure:
 {
   "questions": [
@@ -216,6 +340,15 @@ Generate questions that ask candidates to:
 - Debug or optimize existing code
 - Design solutions to programming challenges
 - Explain their coding approach and reasoning
+
+{contextSection}
+
+PERSONALIZATION GUIDELINES:
+- Focus on programming languages and technologies mentioned in the candidate's background
+- Align with the technical stack required by the job description
+- Consider the candidate's experience level when determining question complexity
+- Include questions about specific frameworks or tools they've worked with
+- Create problems that reflect real-world scenarios relevant to the role
 
 Examples of coding questions:
 - "Write a function to reverse a string"
@@ -287,51 +420,72 @@ export function getQuestionPrompt(
     // Fallback to behavioral if type not found
     return questionPrompts.behavioral.generator
       .replace('{count}', count.toString())
-      .replace('{subject}', subject);
+      .replace('{subject}', subject)
+      .replace('{contextSection}', '');
   }
   
   let finalPrompt = prompt.generator
     .replace('{count}', count.toString())
     .replace('{subject}', subject);
 
-  // Add context information if provided
+  // Generate context section if context is provided
+  let contextSection = '';
   if (context && (context.resume || context.jobDescription || context.candidateAnalysis)) {
-    const contextSection = `
-ADDITIONAL CONTEXT FOR PERSONALIZED QUESTIONS:
-
-${context.resume ? `CANDIDATE'S RESUME/BACKGROUND:
-${context.resume}
-
-` : ''}${context.jobDescription ? `JOB DESCRIPTION:
-${context.jobDescription}
-
-` : ''}${context.candidateAnalysis ? `CANDIDATE'S ANALYSIS OF EXPECTED TOPICS:
-${context.candidateAnalysis}
-
-` : ''}IMPORTANT: Use this context to generate more relevant and personalized questions. Reference specific experiences, skills, or requirements mentioned in the resume and job description. Focus on areas that align with the candidate's background and the role requirements.
-
+    const contextSummary = generateContextSummary(context);
+    contextSection = `
+PERSONALIZATION CONTEXT:
+${contextSummary}
 `;
-
-    // Insert context after the initial description but before the requirements
-    const insertIndex = finalPrompt.indexOf('Generate questions that ask candidates to:');
-    if (insertIndex !== -1) {
-      finalPrompt = finalPrompt.slice(0, insertIndex) + contextSection + finalPrompt.slice(insertIndex);
-    } else {
-      // If we can't find the insertion point, add context at the beginning
-      finalPrompt = contextSection + finalPrompt;
-    }
   }
+
+  finalPrompt = finalPrompt.replace('{contextSection}', contextSection);
   
   return finalPrompt;
 }
 
 // Function to get the appropriate evaluation prompt based on question type
-export function getEvaluationPrompt(type: string): string {
+export function getEvaluationPrompt(
+  type: string, 
+  context?: {
+    resume?: string
+    jobDescription?: string
+    candidateAnalysis?: string
+  }
+): string {
   const prompt = questionPrompts[type as keyof typeof questionPrompts];
   if (!prompt) {
     // Fallback to behavioral if type not found
     return questionPrompts.behavioral.evaluator;
   }
   
-  return prompt.evaluator;
+  let finalPrompt = prompt.evaluator;
+
+  // Add context-aware evaluation guidelines if context is provided
+  if (context && (context.resume || context.jobDescription || context.candidateAnalysis)) {
+    const contextSummary = generateContextSummary(context);
+    const contextGuidelines = `
+
+CONTEXT-AWARE EVALUATION GUIDELINES:
+${contextSummary}
+
+When evaluating this response, also consider:
+- How well the answer aligns with the candidate's stated background and experience
+- Whether the response demonstrates skills relevant to the job requirements
+- If the candidate shows understanding of the specific role and industry context
+- How the response addresses the candidate's self-identified areas of focus
+- Whether the answer reflects the technical stack and tools mentioned in their background
+
+`;
+    
+    // Insert context guidelines before the Response Format section
+    const insertIndex = finalPrompt.indexOf('**Response Format:**');
+    if (insertIndex !== -1) {
+      finalPrompt = finalPrompt.slice(0, insertIndex) + contextGuidelines + finalPrompt.slice(insertIndex);
+    } else {
+      // If we can't find the insertion point, add context at the end
+      finalPrompt += contextGuidelines;
+    }
+  }
+  
+  return finalPrompt;
 } 

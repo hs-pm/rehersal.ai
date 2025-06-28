@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { evaluateResponse, transcribeAudio } from '../../../../lib/groq'
-import { insertResponse, getQuestionById } from '../../../../lib/db'
+import { insertResponse, getQuestionById, getPracticeSessionById } from '../../../../lib/db'
 
 export async function POST(request: NextRequest) {
   try {
@@ -36,8 +36,16 @@ export async function POST(request: NextRequest) {
     const question = await getQuestionById(questionId.toString())
     const questionType = question?.type || 'behavioral' // Default to behavioral if type not found
 
-    // Evaluate the response with type-specific evaluation
-    const evaluation = await evaluateResponse(questionText, finalResponse, questionType)
+    // Get the session to retrieve context for personalized evaluation
+    const session = await getPracticeSessionById(sessionId.toString())
+    const context = session ? {
+      resume: session.resume,
+      jobDescription: session.job_description,
+      candidateAnalysis: session.candidate_analysis
+    } : undefined
+
+    // Evaluate the response with type-specific evaluation and context
+    const evaluation = await evaluateResponse(questionText, finalResponse, questionType, context)
 
     // Store the response
     const response = await insertResponse({

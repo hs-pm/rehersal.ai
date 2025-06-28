@@ -3,7 +3,14 @@ import { createPracticeSession } from '../../../../lib/db'
 
 export async function POST(request: NextRequest) {
   try {
-    const { title, subject, totalQuestions } = await request.json()
+    const { 
+      title, 
+      subject, 
+      totalQuestions, 
+      resume, 
+      jobDescription, 
+      candidateAnalysis 
+    } = await request.json()
 
     if (!title || !subject) {
       return NextResponse.json(
@@ -16,7 +23,10 @@ export async function POST(request: NextRequest) {
       title,
       subject,
       total_questions: totalQuestions || 0,
-      completed_questions: 0
+      completed_questions: 0,
+      resume,
+      job_description: jobDescription,
+      candidate_analysis: candidateAnalysis
     })
 
     return NextResponse.json({

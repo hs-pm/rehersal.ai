@@ -167,7 +167,11 @@ export default function NewPracticePage() {
             body: JSON.stringify({
               title: `${subject} Practice Session`,
               subject,
-              totalQuestions: data.questions.length
+              totalQuestions: data.questions.length,
+              // Include context fields for personalized evaluation
+              resume: resume.trim() || undefined,
+              jobDescription: jobDescription.trim() || undefined,
+              candidateAnalysis: candidateAnalysis.trim() || undefined
             })
           })
           

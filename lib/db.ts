@@ -24,6 +24,9 @@ export interface PracticeSession {
   completed_at?: Date
   total_questions: number
   completed_questions: number
+  resume?: string
+  job_description?: string
+  candidate_analysis?: string
 }
 
 export interface Response {
@@ -69,7 +72,10 @@ export async function createTables() {
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
         completed_at TIMESTAMP,
         total_questions INTEGER DEFAULT 0,
-        completed_questions INTEGER DEFAULT 0
+        completed_questions INTEGER DEFAULT 0,
+        resume TEXT,
+        job_description TEXT,
+        candidate_analysis TEXT
       )
     `)
 
@@ -133,8 +139,8 @@ export async function getQuestions(subject?: string, limit: number = 10): Promis
 export async function createPracticeSession(session: Omit<PracticeSession, 'id' | 'created_at'>): Promise<PracticeSession> {
   try {
     const result = await pool.query(
-      'INSERT INTO practice_sessions (title, subject, total_questions) VALUES ($1, $2, $3) RETURNING *',
-      [session.title, session.subject, session.total_questions]
+      'INSERT INTO practice_sessions (title, subject, total_questions, resume, job_description, candidate_analysis) VALUES ($1, $2, $3, $4, $5, $6) RETURNING *',
+      [session.title, session.subject, session.total_questions, session.resume, session.job_description, session.candidate_analysis]
     )
     return result.rows[0]
   } catch (error) {
