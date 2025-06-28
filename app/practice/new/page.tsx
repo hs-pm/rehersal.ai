@@ -68,6 +68,7 @@ export default function NewPracticePage() {
   const [guidance, setGuidance] = useState('')
   const [showGuidance, setShowGuidance] = useState(false)
   const [loadingGuidance, setLoadingGuidance] = useState(false)
+  const [showClarifyingQuestions, setShowClarifyingQuestions] = useState(false)
 
   // Advanced section state
   const [showAdvanced, setShowAdvanced] = useState(false)
@@ -591,10 +592,10 @@ export default function NewPracticePage() {
   const currentQuestion = questions[currentQuestionIndex]
 
   return (
-    <div className="min-h-screen bg-gray-50 py-8">
-      <div className="max-w-6xl mx-auto px-4">
+    <div className="min-h-screen bg-gray-50 py-6">
+      <div className="w-full px-4 sm:px-6 lg:px-8">
         {/* Progress Bar */}
-        <div className="mb-8">
+        <div className="mb-6 max-w-7xl mx-auto">
           <div className="flex justify-between items-center mb-2">
             <span className="text-sm text-gray-600">
               Question {currentQuestionIndex + 1} of {questions.length}
@@ -611,144 +612,56 @@ export default function NewPracticePage() {
           </div>
         </div>
 
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-          {/* Question and Response Section */}
-          <div className="space-y-6">
-            <div className="card">
-              <div className="flex items-center space-x-2 mb-4">
-                <span className={`px-2 py-1 rounded text-xs font-medium ${
-                  currentQuestion.type === 'behavioral' ? 'bg-blue-100 text-blue-800' :
-                  currentQuestion.type === 'technical' ? 'bg-green-100 text-green-800' :
-                  currentQuestion.type === 'situational' ? 'bg-orange-100 text-orange-800' :
-                  'bg-purple-100 text-purple-800'
-                }`}>
-                  {currentQuestion.type}
-                </span>
-                <span className="text-sm text-gray-500">{currentQuestion.category}</span>
-              </div>
-              
-              <h2 className="text-xl font-semibold text-gray-900 mb-4">
-                {currentQuestion.question}
-              </h2>
+        <div className="max-w-7xl mx-auto space-y-6">
+          {/* Question Section - Full Width */}
+          <div className="bg-white rounded-lg shadow-md p-6 lg:p-8">
+            <div className="flex items-center justify-between mb-4">
+              <span className={`px-3 py-1 rounded-full text-sm font-medium ${
+                currentQuestion.type === 'behavioral' ? 'bg-blue-100 text-blue-800' :
+                currentQuestion.type === 'technical' ? 'bg-green-100 text-green-800' :
+                currentQuestion.type === 'situational' ? 'bg-orange-100 text-orange-800' :
+                currentQuestion.type === 'coding' ? 'bg-purple-100 text-purple-800' :
+                'bg-gray-100 text-gray-800'
+              }`}>
+                {currentQuestion.type.charAt(0).toUpperCase() + currentQuestion.type.slice(1)}
+              </span>
+              <span className="text-sm text-gray-500">{currentQuestion.category}</span>
             </div>
+            
+            <h2 className="text-xl lg:text-2xl font-semibold text-gray-900 leading-relaxed mb-4">
+              {currentQuestion.question}
+            </h2>
 
-            {/* Response Section */}
-            <div className="bg-white rounded-lg shadow-md p-6">
-              <h3 className="text-lg font-semibold mb-4">Your Response</h3>
-              
-              {/* Speech Recognition Controls */}
-              {speechSupported && (
-                <div className="mb-4 p-4 bg-gray-50 rounded-lg">
-                  <div className="flex items-center justify-between mb-3">
-                    <h4 className="font-medium text-gray-700">Voice Response</h4>
-                    <div className="flex items-center space-x-2">
-                      {isListening && (
-                        <div className="flex items-center space-x-1">
-                          <div className="w-2 h-2 bg-red-500 rounded-full animate-pulse"></div>
-                          <span className="text-sm text-red-600">Listening...</span>
-                        </div>
-                      )}
-                      {speechError && (
-                        <span className="text-sm text-red-600">{speechError}</span>
-                      )}
-                    </div>
-                  </div>
-                  
-                  <div className="flex items-center space-x-3 mb-3">
-                    <button
-                      onClick={isListening ? stopListening : startListening}
-                      className={`p-3 rounded-full transition-colors ${
-                        isListening 
-                          ? 'bg-red-500 text-white hover:bg-red-600' 
-                          : 'bg-blue-500 text-white hover:bg-blue-600'
-                      }`}
-                      disabled={!speechSupported}
-                    >
-                      {isListening ? <VolumeX size={20} /> : <Volume2 size={20} />}
-                    </button>
-                    <span className="text-sm text-gray-600">
-                      {isListening ? 'Click to stop recording' : 'Click to start voice response'}
-                    </span>
-                    {transcript && (
-                      <button
-                        onClick={clearTranscript}
-                        className="text-sm text-gray-500 hover:text-gray-700"
-                      >
-                        Clear
-                      </button>
-                    )}
-                  </div>
-
-                  {/* Transcript Display */}
-                  {transcript && (
-                    <div className="mb-3">
-                      <div className="text-sm text-gray-600 mb-1">Transcript:</div>
-                      <div className="p-3 bg-white border rounded-lg text-gray-800">
-                        {transcript}
-                        {interimTranscript && (
-                          <span className="text-gray-400 italic">
-                            {interimTranscript}
-                          </span>
-                        )}
-                      </div>
-                    </div>
-                  )}
-                </div>
-              )}
-
-              {/* Browser Support Warning */}
-              {!speechSupported && (
-                <div className="mb-4 p-4 bg-yellow-50 border border-yellow-200 rounded-lg">
-                  <div className="flex items-start">
-                    <div className="flex-shrink-0">
-                      <svg className="h-5 w-5 text-yellow-400" viewBox="0 0 20 20" fill="currentColor">
-                        <path fillRule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
-                      </svg>
-                    </div>
-                    <div className="ml-3">
-                      <h3 className="text-sm font-medium text-yellow-800">
-                        Voice Response Not Available
-                      </h3>
-                      <div className="mt-2 text-sm text-yellow-700">
-                        <p>
-                          Your browser doesn't support voice recognition. Please use Chrome, Edge, or Safari for voice response functionality.
-                        </p>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              )}
-
-              {/* Text Response */}
-              <div className="mb-4">
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Text Response {speechSupported && '(or use voice above)'}
-                </label>
-                <textarea
-                  value={textResponse}
-                  onChange={(e) => setTextResponse(e.target.value)}
-                  placeholder="Type your response here..."
-                  className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-none"
-                  rows={4}
-                />
-              </div>
-
-              {/* Ask Clarifying Question Section */}
-              <div className="mb-4 p-4 bg-blue-50 border border-blue-200 rounded-lg">
-                <h4 className="font-medium text-gray-700 mb-3 flex items-center">
+            {/* Clarifying Questions Section - Collapsible */}
+            <div className="border-t pt-4">
+              <button
+                onClick={() => setShowClarifyingQuestions(!showClarifyingQuestions)}
+                className="flex items-center justify-between w-full text-left text-sm font-medium text-gray-700 hover:text-gray-900 transition-colors"
+              >
+                <span className="flex items-center">
                   <svg className="w-4 h-4 mr-2 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8.228 9c.549-1.165 2.03-2 3.772-2 2.21 0 4 1.343 4 3 0 1.4-1.278 2.575-3.006 2.907-.542.104-.994.54-.994 1.093m0 3h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
                   </svg>
                   Need Help? Ask a Clarifying Question
-                </h4>
-                
-                <div className="space-y-3">
+                </span>
+                <svg 
+                  className={`w-4 h-4 transition-transform ${showClarifyingQuestions ? 'rotate-180' : ''}`} 
+                  fill="none" 
+                  stroke="currentColor" 
+                  viewBox="0 0 24 24"
+                >
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                </svg>
+              </button>
+              
+              {showClarifyingQuestions && (
+                <div className="mt-4 space-y-3">
                   <textarea
                     value={clarifyingQuestion}
                     onChange={(e) => setClarifyingQuestion(e.target.value)}
                     placeholder="Ask a clarifying question to get guidance on how to approach this question..."
                     className="w-full p-3 border border-blue-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-none text-sm"
-                    rows={2}
+                    rows={3}
                   />
                   
                   <button
@@ -770,67 +683,175 @@ export default function NewPracticePage() {
                       </>
                     )}
                   </button>
-                </div>
 
-                {/* Guidance Display */}
-                {showGuidance && guidance && (
-                  <div className="mt-4 p-3 bg-white border border-blue-300 rounded-lg">
-                    <div className="flex items-center justify-between mb-2">
-                      <h5 className="font-medium text-gray-700 text-sm">AI Guidance</h5>
-                      <button
-                        onClick={() => setShowGuidance(false)}
-                        className="text-gray-400 hover:text-gray-600 text-sm"
-                      >
-                        Hide
-                      </button>
+                  {/* Guidance Display */}
+                  {showGuidance && guidance && (
+                    <div className="p-4 bg-blue-50 border border-blue-300 rounded-lg">
+                      <div className="flex items-center justify-between mb-2">
+                        <h5 className="font-medium text-gray-700 text-sm">AI Guidance</h5>
+                        <button
+                          onClick={() => setShowGuidance(false)}
+                          className="text-gray-400 hover:text-gray-600 text-sm"
+                        >
+                          Hide
+                        </button>
+                      </div>
+                      <div className="text-sm text-gray-700 leading-relaxed">
+                        {guidance}
+                      </div>
                     </div>
-                    <div className="text-sm text-gray-700 leading-relaxed">
-                      {guidance}
+                  )}
+                </div>
+              )}
+            </div>
+          </div>
+
+          {/* Response Section - Full Width */}
+          <div className="bg-white rounded-lg shadow-md p-6 lg:p-8 space-y-6">
+            <h3 className="text-lg font-semibold text-gray-900">Your Response</h3>
+            
+            {/* Recording Controls Row */}
+            <div className="flex flex-col sm:flex-row gap-4">
+              {/* Voice Input Button */}
+              {speechSupported && (
+                <div className="flex-1">
+                  <div className="p-4 bg-gray-50 rounded-lg border-2 border-dashed border-gray-200 hover:border-blue-300 transition-colors">
+                    <div className="flex items-center justify-between mb-3">
+                      <h4 className="font-medium text-gray-700">Voice Input</h4>
+                      <div className="flex items-center space-x-2">
+                        {isListening && (
+                          <div className="flex items-center space-x-1">
+                            <div className="w-2 h-2 bg-red-500 rounded-full animate-pulse"></div>
+                            <span className="text-sm text-red-600">Listening...</span>
+                          </div>
+                        )}
+                        {speechError && (
+                          <span className="text-sm text-red-600">{speechError}</span>
+                        )}
+                      </div>
+                    </div>
+                    
+                    <div className="flex items-center space-x-3 mb-3">
+                      <button
+                        onClick={isListening ? stopListening : startListening}
+                        className={`p-4 rounded-full transition-colors shadow-lg ${
+                          isListening 
+                            ? 'bg-red-500 text-white hover:bg-red-600' 
+                            : 'bg-blue-500 text-white hover:bg-blue-600'
+                        }`}
+                        disabled={!speechSupported}
+                      >
+                        {isListening ? <VolumeX size={24} /> : <Volume2 size={24} />}
+                      </button>
+                      <span className="text-sm text-gray-600">
+                        {isListening ? 'Click to stop recording' : 'Click to start voice response'}
+                      </span>
+                      {transcript && (
+                        <button
+                          onClick={clearTranscript}
+                          className="text-sm text-gray-500 hover:text-gray-700"
+                        >
+                          Clear
+                        </button>
+                      )}
+                    </div>
+
+                    {/* Transcript Display */}
+                    {transcript && (
+                      <div className="mb-3">
+                        <div className="text-sm text-gray-600 mb-1">Live Transcript:</div>
+                        <div className="p-3 bg-white border rounded-lg text-gray-800 max-h-32 overflow-y-auto">
+                          {transcript}
+                          {interimTranscript && (
+                            <span className="text-gray-400 italic">
+                              {interimTranscript}
+                            </span>
+                          )}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )}
+
+              {/* Video Recording Button */}
+              <div className="flex-1">
+                <div className="p-4 bg-gray-50 rounded-lg border-2 border-dashed border-gray-200 hover:border-green-300 transition-colors">
+                  <div className="flex items-center justify-between mb-3">
+                    <h4 className="font-medium text-gray-700">Video Recording</h4>
+                    {isVideoRecording && (
+                      <div className="flex items-center space-x-1">
+                        <div className="w-2 h-2 bg-red-500 rounded-full animate-pulse"></div>
+                        <span className="text-sm text-red-600">Recording...</span>
+                      </div>
+                    )}
+                  </div>
+                  
+                  <div className="flex items-center space-x-3 mb-3">
+                    <button
+                      onClick={showCamera ? stopVideoRecording : startVideoRecording}
+                      className={`p-4 rounded-full transition-colors shadow-lg ${
+                        isVideoRecording 
+                          ? 'bg-red-500 text-white hover:bg-red-600' 
+                          : 'bg-green-500 text-white hover:bg-green-600'
+                      }`}
+                    >
+                      {isVideoRecording ? <Square size={24} /> : <Video size={24} />}
+                    </button>
+                    <span className="text-sm text-gray-600">
+                      {isVideoRecording ? 'Recording... Click to stop' : 'Record video response'}
+                    </span>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Browser Support Warning */}
+            {!speechSupported && (
+              <div className="p-4 bg-yellow-50 border border-yellow-200 rounded-lg">
+                <div className="flex items-start">
+                  <div className="flex-shrink-0">
+                    <svg className="h-5 w-5 text-yellow-400" viewBox="0 0 20 20" fill="currentColor">
+                      <path fillRule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
+                    </svg>
+                  </div>
+                  <div className="ml-3">
+                    <h3 className="text-sm font-medium text-yellow-800">
+                      Voice Response Not Available
+                    </h3>
+                    <div className="mt-2 text-sm text-yellow-700">
+                      <p>
+                        Your browser doesn't support voice recognition. Please use Chrome, Edge, or Safari for voice response functionality.
+                      </p>
                     </div>
                   </div>
-                )}
-              </div>
-
-              {/* Video Recording Section */}
-              <div className="mb-4">
-                <div className="flex items-center space-x-3 mb-3">
-                  <button
-                    onClick={showCamera ? stopVideoRecording : startVideoRecording}
-                    className={`p-3 rounded-full transition-colors ${
-                      isVideoRecording 
-                        ? 'bg-red-500 text-white hover:bg-red-600' 
-                        : 'bg-green-500 text-white hover:bg-green-600'
-                    }`}
-                  >
-                    {isVideoRecording ? <Square size={20} /> : <Video size={20} />}
-                  </button>
-                  <span className="text-sm text-gray-600">
-                    {isVideoRecording ? 'Recording... Click to stop' : 'Record video response'}
-                  </span>
                 </div>
+              </div>
+            )}
 
-                {/* Video Preview */}
+            {/* Video Preview Area - Large when active */}
+            {(showCamera || recordedVideo) && (
+              <div className="bg-gray-900 rounded-lg overflow-hidden">
                 {showCamera && (
-                  <div className="mb-3">
+                  <div className="relative">
                     <Webcam
                       ref={webcamRef}
-                      className="w-full rounded-lg"
+                      className="w-full h-auto max-h-96 object-cover"
                       videoConstraints={{
-                        width: 640,
-                        height: 480,
+                        width: 1280,
+                        height: 720,
                         facingMode: 'user'
                       }}
                     />
                   </div>
                 )}
 
-                {/* Recorded Video Playback */}
                 {recordedVideo && (
-                  <div className="mb-3">
+                  <div className="relative">
                     <video
                       src={recordedVideo}
                       controls
-                      className="w-full rounded-lg"
+                      className="w-full h-auto max-h-96 object-cover"
                       onPlay={() => setIsPlaying(true)}
                       onPause={() => setIsPlaying(false)}
                       onEnded={() => setIsPlaying(false)}
@@ -838,59 +859,56 @@ export default function NewPracticePage() {
                   </div>
                 )}
               </div>
+            )}
 
-              {/* Submit Button */}
-              <button
-                onClick={handleSubmitResponse}
-                disabled={submitting || (!textResponse.trim() && !transcript.trim() && !recordedVideo)}
-                className="btn-primary w-full flex items-center justify-center"
-              >
-                {submitting ? (
-                  <>
-                    <Loader2 className="animate-spin mr-2" size={20} />
-                    Submitting...
-                  </>
-                ) : (
-                  <>
-                    <Send className="mr-2" size={20} />
-                    Submit Response
-                  </>
-                )}
-              </button>
-            </div>
-          </div>
-
-          {/* Video Preview */}
-          <div className="card">
-            <h3 className="text-lg font-semibold text-gray-900 mb-4">Video Preview</h3>
-            <div className="relative bg-gray-900 rounded-lg overflow-hidden h-64 flex items-center justify-center">
-              {showCamera ? (
-                <Webcam
-                  ref={webcamRef}
-                  audio={true}
-                  className="w-full h-full object-cover"
-                  screenshotFormat="image/jpeg"
-                />
-              ) : recordedVideo ? (
-                <video
-                  src={recordedVideo}
-                  controls
-                  className="w-full h-full object-cover"
-                />
-              ) : (
+            {/* Video Preview Placeholder */}
+            {!showCamera && !recordedVideo && (
+              <div className="relative bg-gray-900 rounded-lg overflow-hidden h-48 flex items-center justify-center">
                 <div className="text-gray-400 text-center">
                   <Video className="w-12 h-12 mx-auto mb-2" />
                   <p>Video recording will appear here</p>
                   <p className="text-sm mt-1">Click the video button to start recording</p>
                 </div>
-              )}
-              
-              {isVideoRecording && (
-                <div className="absolute top-4 right-4 bg-red-500 text-white px-2 py-1 rounded text-sm">
-                  REC
-                </div>
-              )}
+              </div>
+            )}
+
+            {/* Text Input Area - Auto-expanding */}
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Text Response {speechSupported && '(or use voice above)'}
+              </label>
+              <textarea
+                value={textResponse}
+                onChange={(e) => setTextResponse(e.target.value)}
+                placeholder="Type your response here... You can also use voice input or video recording above."
+                className="w-full p-4 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-none transition-all duration-200"
+                rows={Math.max(4, Math.min(12, textResponse.split('\n').length + 2))}
+                style={{ minHeight: '120px', maxHeight: '400px' }}
+              />
+              <div className="flex justify-between items-center mt-2 text-sm text-gray-500">
+                <span>{textResponse.length} characters</span>
+                <span>{textResponse.split(/\s+/).filter(word => word.length > 0).length} words</span>
+              </div>
             </div>
+
+            {/* Submit Button - Full Width */}
+            <button
+              onClick={handleSubmitResponse}
+              disabled={submitting || (!textResponse.trim() && !transcript.trim() && !recordedVideo)}
+              className="btn-primary w-full flex items-center justify-center py-4 text-lg font-medium"
+            >
+              {submitting ? (
+                <>
+                  <Loader2 className="animate-spin mr-2" size={24} />
+                  Submitting...
+                </>
+              ) : (
+                <>
+                  <Send className="mr-2" size={24} />
+                  Submit Response
+                </>
+              )}
+            </button>
           </div>
         </div>
       </div>
