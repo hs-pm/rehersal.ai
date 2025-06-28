@@ -119,11 +119,7 @@ export default function NewPracticePage() {
     if (!subject.trim()) return
     
     // Check if at least one question type is selected
-    const selectedTypesArray = Object.entries(selectedTypes)
-      .filter(([_, isSelected]) => isSelected)
-      .map(([type, _]) => type)
-    
-    if (selectedTypesArray.length === 0) {
+    if (selectedTypes.length === 0) {
       alert('Please select at least one question type')
       return
     }
@@ -136,7 +132,7 @@ export default function NewPracticePage() {
         body: JSON.stringify({ 
           subject, 
           count: count,
-          types: selectedTypesArray
+          types: selectedTypes
         })
       })
       

@@ -1,140 +1,174 @@
 import { Groq } from 'groq-sdk'
+import { getQuestionPrompt, getEvaluationPrompt } from './prompts'
 
 const groq = new Groq({
   apiKey: process.env.GROQ_API_KEY || '',
 })
 
-export default groq
+export interface Question {
+  id: string
+  question: string
+  type: string
+  category: string
+}
 
-export async function generateQuestions(subject: string, count: number = 5, types: string[] = ['behavioral', 'technical', 'situational']) {
+export interface Evaluation {
+  score: number
+  feedback: string
+  strengths: string[]
+  improvements: string[]
+  timeline_analysis: {
+    clarity: number
+    confidence: number
+    technical_depth: number
+    communication: number
+    structure: number
+    engagement: number
+    completeness: number
+  }
+}
+
+export async function generateQuestions(
+  subject: string,
+  count: number,
+  selectedTypes: string[] = ['behavioral', 'technical', 'situational', 'coding']
+): Promise<Question[]> {
   try {
-    const typesText = types.join(', ')
+    console.log(`Generating questions for subject: ${subject} count: ${count} types:`, selectedTypes)
+    
+    // Use the first selected type for now (can be enhanced to generate mixed types)
+    const questionType = selectedTypes[0] || 'behavioral'
+    const prompt = getQuestionPrompt(questionType, count, subject)
+    
     const completion = await groq.chat.completions.create({
       messages: [
         {
-          role: "system",
-          content: `You are an expert interview coach. Generate ${count} relevant interview questions for the subject: "${subject}".
-          
-          IMPORTANT: Return ONLY a valid JSON array with no additional text, formatting, or explanations.
-          
-          Requirements:
-          - Only generate questions of the following types: ${typesText}
-          - Do NOT include any questions of other types.
-          - Use this EXACT JSON structure for each question:
-            {"id": "1", "question": "Question text", "type": "${typesText}", "category": "subject area"}
-          - Return ONLY the JSON array: [{"id": "1", ...}, {"id": "2", ...}]
-          - No text before or after the JSON
-          - No markdown formatting
-          - No explanations or comments
-          - Ensure all quotes are properly escaped
-          - Ensure the JSON is properly formatted with no trailing commas`
+          role: 'system',
+          content: prompt
         }
       ],
-      model: "llama3-8b-8192",
+      model: 'llama-3.1-8b-instant',
       temperature: 0.7,
+      max_tokens: 2000,
+    })
+
+    const response = completion.choices[0]?.message?.content || ''
+    console.log('Raw Groq response:', response)
+
+    // Try to parse the JSON response
+    let questions: Question[] = []
+    try {
+      questions = JSON.parse(response)
+    } catch (error) {
+      console.log('Failed to parse JSON, trying to extract JSON from response:', error)
+      
+      // Try to extract JSON from the response
+      const jsonMatch = response.match(/\[[\s\S]*\]/)
+      if (jsonMatch) {
+        try {
+          questions = JSON.parse(jsonMatch[0])
+        } catch (secondError) {
+          console.log('Failed to parse cleaned JSON:', secondError)
+        }
+      }
+      
+      // If still no success, create fallback questions
+      if (!questions || questions.length === 0) {
+        console.log('Creating fallback questions due to parsing failure')
+        questions = Array.from({ length: count }, (_, i) => ({
+          id: (i + 1).toString(),
+          question: `Sample ${subject} question ${i + 1}`,
+          type: questionType,
+          category: subject
+        }))
+      }
+    }
+
+    console.log('Generated questions:', questions)
+    return questions
+  } catch (error) {
+    console.error('Error generating questions:', error)
+    
+    // Return fallback questions
+    return Array.from({ length: count }, (_, i) => ({
+      id: (i + 1).toString(),
+      question: `Sample ${subject} question ${i + 1}`,
+      type: selectedTypes[0] || 'behavioral',
+      category: subject
+    }))
+  }
+}
+
+export async function evaluateResponse(
+  question: string,
+  response: string,
+  questionType: string = 'behavioral'
+): Promise<Evaluation> {
+  try {
+    const prompt = getEvaluationPrompt(questionType)
+    
+    const completion = await groq.chat.completions.create({
+      messages: [
+        {
+          role: 'system',
+          content: prompt
+        },
+        {
+          role: 'user',
+          content: `Question: ${question}\n\nResponse: ${response}\n\nPlease evaluate this response.`
+        }
+      ],
+      model: 'llama-3.1-8b-instant',
+      temperature: 0.3,
       max_tokens: 1000,
     })
 
-    const response = completion.choices[0]?.message?.content
-    if (!response) throw new Error('No response from Groq')
-    
-    console.log('Raw Groq response:', response)
-    
-    // Try to parse as JSON
+    const responseText = completion.choices[0]?.message?.content || ''
+    console.log('Raw evaluation response:', responseText)
+
+    // Try to parse the JSON response
     try {
-      return JSON.parse(response)
-    } catch (parseError) {
-      console.error('Failed to parse JSON, trying to extract JSON from response:', parseError)
+      const evaluation = JSON.parse(responseText)
+      return evaluation
+    } catch (error) {
+      console.error('Failed to parse evaluation response:', error)
       
-      // Try multiple strategies to extract valid JSON
-      let cleanedResponse = response.trim()
-      
-      // Strategy 1: Remove any text before the first [
-      const firstBracketIndex = cleanedResponse.indexOf('[')
-      if (firstBracketIndex > 0) {
-        cleanedResponse = cleanedResponse.substring(firstBracketIndex)
-      }
-      
-      // Strategy 2: Remove any text after the last ]
-      const lastBracketIndex = cleanedResponse.lastIndexOf(']')
-      if (lastBracketIndex > 0 && lastBracketIndex < cleanedResponse.length - 1) {
-        cleanedResponse = cleanedResponse.substring(0, lastBracketIndex + 1)
-      }
-      
-      // Strategy 3: Try to fix common JSON formatting issues
-      cleanedResponse = cleanedResponse
-        .replace(/\n/g, ' ') // Replace newlines with spaces
-        .replace(/\r/g, '') // Remove carriage returns
-        .replace(/\t/g, ' ') // Replace tabs with spaces
-        .replace(/\s+/g, ' ') // Replace multiple spaces with single space
-        .replace(/,\s*]/g, ']') // Remove trailing commas before closing brackets
-        .replace(/,\s*}/g, '}') // Remove trailing commas before closing braces
-      
-      try {
-        return JSON.parse(cleanedResponse)
-      } catch (secondParseError) {
-        console.error('Failed to parse cleaned JSON:', secondParseError)
-        
-        // Strategy 4: Try to extract JSON using regex
-        const jsonMatch = response.match(/\[[\s\S]*\]/)
-        if (jsonMatch) {
-          try {
-            const extractedJson = jsonMatch[0]
-              .replace(/,\s*]/g, ']') // Remove trailing commas
-              .replace(/,\s*}/g, '}') // Remove trailing commas
-            return JSON.parse(extractedJson)
-          } catch (thirdParseError) {
-            console.error('Failed to parse regex-extracted JSON:', thirdParseError)
-          }
-        }
-        
-        // Strategy 5: Try to manually construct JSON from the response
-        try {
-          const lines = response.split('\n').filter(line => line.trim())
-          const questions: Array<{ id: string; question: string; type: string; category: string }> = []
-          let currentQuestion: { id?: string; question?: string; type?: string; category?: string } = {}
-          
-          for (const line of lines) {
-            if (line.includes('"id"') || line.includes('"question"') || line.includes('"type"') || line.includes('"category"')) {
-              // Extract key-value pairs
-              const keyMatch = line.match(/"([^"]+)":\s*"([^"]+)"/)
-              if (keyMatch) {
-                currentQuestion[keyMatch[1] as keyof typeof currentQuestion] = keyMatch[2]
-              }
-              
-              // If we have all required fields, add to questions
-              if (currentQuestion.id && currentQuestion.question && currentQuestion.type && currentQuestion.category) {
-                questions.push({ 
-                  id: currentQuestion.id, 
-                  question: currentQuestion.question, 
-                  type: currentQuestion.type, 
-                  category: currentQuestion.category 
-                })
-                currentQuestion = {}
-              }
-            }
-          }
-          
-          if (questions.length > 0) {
-            return questions
-          }
-        } catch (manualParseError) {
-          console.error('Failed to manually parse JSON:', manualParseError)
+      // Return a default evaluation
+      return {
+        score: 50,
+        feedback: 'Unable to parse evaluation response',
+        strengths: [],
+        improvements: ['Provide a more detailed response'],
+        timeline_analysis: {
+          clarity: 5,
+          confidence: 5,
+          technical_depth: 5,
+          communication: 5,
+          structure: 5,
+          engagement: 5,
+          completeness: 5
         }
       }
-      
-      // If all else fails, create a fallback response
-      console.log('Creating fallback questions due to parsing failure')
-      return Array.from({ length: count }, (_, i) => ({
-        id: (i + 1).toString(),
-        question: `Sample ${subject} question ${i + 1}`,
-        type: types[i % types.length] || 'behavioral',
-        category: subject
-      }))
     }
   } catch (error) {
-    console.error('Error generating questions:', error)
-    throw error
+    console.error('Error evaluating response:', error)
+    
+    // Return a default evaluation
+    return {
+      score: 50,
+      feedback: 'Error occurred during evaluation',
+      strengths: [],
+      improvements: ['Try again with a more detailed response'],
+      timeline_analysis: {
+        clarity: 5,
+        confidence: 5,
+        technical_depth: 5,
+        communication: 5,
+        structure: 5,
+        engagement: 5,
+        completeness: 5
+      }
+    }
   }
 }
 
@@ -160,87 +194,6 @@ export async function transcribeAudio(audioBase64: string) {
     return completion.choices[0]?.message?.content || ''
   } catch (error) {
     console.error('Error transcribing audio:', error)
-    throw error
-  }
-}
-
-export async function evaluateResponse(question: string, response: string) {
-  try {
-    const completion = await groq.chat.completions.create({
-      messages: [
-        {
-          role: "system",
-          content: `You are an expert interview evaluator. Analyze the candidate's response to the question and provide detailed feedback.
-          Return ONLY a valid JSON object with this exact structure:
-          {
-            "score": 85,
-            "feedback": "Detailed feedback here",
-            "strengths": ["strength1", "strength2"],
-            "improvements": ["improvement1", "improvement2"],
-            "timeline_analysis": {
-              "clarity": 8,
-              "confidence": 7,
-              "technical_depth": 9,
-              "communication": 8,
-              "structure": 7,
-              "engagement": 8,
-              "completeness": 9
-            }
-          }
-          
-          Do not include any text before or after the JSON object. Only return the JSON.`
-        },
-        {
-          role: "user",
-          content: `Question: "${question}"\n\nResponse: "${response}"\n\nEvaluate this response.`
-        }
-      ],
-      model: "llama3-8b-8192",
-      temperature: 0.3,
-      max_tokens: 1000,
-    })
-
-    const response_text = completion.choices[0]?.message?.content
-    if (!response_text) throw new Error('No evaluation response')
-    
-    console.log('Raw evaluation response:', response_text)
-    
-    // Try to parse as JSON
-    try {
-      return JSON.parse(response_text)
-    } catch (parseError) {
-      console.error('Failed to parse evaluation JSON, trying to extract JSON from response:', parseError)
-      
-      // Try to extract JSON from the response if it contains extra text
-      const jsonMatch = response_text.match(/\{[\s\S]*\}/)
-      if (jsonMatch) {
-        try {
-          return JSON.parse(jsonMatch[0])
-        } catch (secondParseError) {
-          console.error('Failed to parse extracted evaluation JSON:', secondParseError)
-        }
-      }
-      
-      // If all else fails, create a fallback response
-      console.log('Creating fallback evaluation due to parsing failure')
-      return {
-        score: 75,
-        feedback: "Unable to parse AI evaluation. Please try again.",
-        strengths: ["Response provided"],
-        improvements: ["Try providing more detailed answers"],
-        timeline_analysis: {
-          clarity: 7,
-          confidence: 7,
-          technical_depth: 7,
-          communication: 7,
-          structure: 7,
-          engagement: 7,
-          completeness: 7
-        }
-      }
-    }
-  } catch (error) {
-    console.error('Error evaluating response:', error)
     throw error
   }
 } 

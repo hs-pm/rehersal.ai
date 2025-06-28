@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { evaluateResponse, transcribeAudio } from '../../../../lib/groq'
-import { insertResponse } from '../../../../lib/db'
+import { insertResponse, getQuestionById } from '../../../../lib/db'
 
 export async function POST(request: NextRequest) {
   try {
@@ -32,8 +32,12 @@ export async function POST(request: NextRequest) {
       transcription = textResponse || ''
     }
 
-    // Evaluate the response
-    const evaluation = await evaluateResponse(questionText, finalResponse)
+    // Get the question to determine its type for type-specific evaluation
+    const question = await getQuestionById(questionId.toString())
+    const questionType = question?.type || 'behavioral' // Default to behavioral if type not found
+
+    // Evaluate the response with type-specific evaluation
+    const evaluation = await evaluateResponse(questionText, finalResponse, questionType)
 
     // Store the response
     const response = await insertResponse({

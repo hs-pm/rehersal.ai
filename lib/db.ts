@@ -187,4 +187,14 @@ export async function getResponses(sessionId: string): Promise<Response[]> {
     console.error('Error getting responses:', error)
     throw error
   }
+}
+
+export async function getQuestionById(id: string): Promise<Question | null> {
+  try {
+    const result = await pool.query('SELECT * FROM questions WHERE id = $1', [id])
+    return result.rows[0] || null
+  } catch (error) {
+    console.error('Error getting question by ID:', error)
+    throw error
+  }
 } 
