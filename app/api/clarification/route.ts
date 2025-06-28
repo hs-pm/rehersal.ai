@@ -32,7 +32,7 @@ Your role is to guide the candidate to think critically and figure out the answe
 
 Provide guidance that will help them develop their own reasoning and arrive at their own answer.
 
-Keep your response concise (2-3 paragraphs maximum) and encouraging.`
+Keep your response concise (10-15 words maximum).`
 
     const completion = await client.chat.completions.create({
       messages: [
