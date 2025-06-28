@@ -430,159 +430,236 @@ export default function NewPracticePage() {
   if (questions.length === 0) {
     return (
       <div className="min-h-screen bg-gray-50 py-12">
-        <div className="max-w-4xl mx-auto px-4">
-          <div className="card">
-            <h1 className="text-3xl font-bold text-gray-900 mb-8">Start New Practice Session</h1>
-            
-            <div className="space-y-6">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Subject/Topic
-                </label>
-                <input
-                  type="text"
-                  value={subject}
-                  onChange={(e) => setSubject(e.target.value)}
-                  placeholder="e.g., React, System Design, Behavioral Questions"
-                  className="input-field"
-                />
-              </div>
-              
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Number of Questions
-                </label>
-                <select
-                  value={count}
-                  onChange={(e) => setCount(Number(e.target.value))}
-                  className="input-field"
-                >
-                  <option value={3}>3 Questions</option>
-                  <option value={5}>5 Questions</option>
-                  <option value={10}>10 Questions</option>
-                </select>
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Question Types
-                </label>
-                <div className="space-y-2">
-                  <label className="flex items-center">
-                    <input
-                      type="checkbox"
-                      checked={selectedTypes.includes('behavioral')}
-                      onChange={(e) => setSelectedTypes(prev => e.target.checked ? [...prev, 'behavioral'] : prev.filter(t => t !== 'behavioral'))}
-                      className="mr-2"
-                    />
-                    Behavioral
-                  </label>
-                  <label className="flex items-center">
-                    <input
-                      type="checkbox"
-                      checked={selectedTypes.includes('technical')}
-                      onChange={(e) => setSelectedTypes(prev => e.target.checked ? [...prev, 'technical'] : prev.filter(t => t !== 'technical'))}
-                      className="mr-2"
-                    />
-                    Technical
-                  </label>
-                  <label className="flex items-center">
-                    <input
-                      type="checkbox"
-                      checked={selectedTypes.includes('situational')}
-                      onChange={(e) => setSelectedTypes(prev => e.target.checked ? [...prev, 'situational'] : prev.filter(t => t !== 'situational'))}
-                      className="mr-2"
-                    />
-                    Situational
-                  </label>
+        <div className="max-w-7xl mx-auto px-4">
+          <h1 className="text-3xl font-bold text-gray-900 mb-8 text-center">Start New Practice Session</h1>
+          
+          <div className="grid lg:grid-cols-3 gap-8">
+            {/* Tips Section - Left Column */}
+            <div className="lg:col-span-1">
+              <div className="bg-white rounded-lg shadow-md p-6 sticky top-6">
+                <div className="flex items-center mb-4">
+                  <div className="flex-shrink-0">
+                    <svg className="w-6 h-6 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z" />
+                    </svg>
+                  </div>
+                  <h3 className="ml-3 text-lg font-semibold text-gray-900">Pro Tips</h3>
                 </div>
-              </div>
-
-              {/* Advanced Section */}
-              <div className="border border-gray-200 rounded-lg">
-                <button
-                  type="button"
-                  onClick={() => setShowAdvanced(!showAdvanced)}
-                  className="w-full px-4 py-3 text-left flex items-center justify-between hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-inset"
-                >
-                  <span className="text-sm font-medium text-gray-700">Advanced Options</span>
-                  <ChevronDown 
-                    className={`w-4 h-4 text-gray-500 transition-transform duration-200 ${
-                      showAdvanced ? 'rotate-180' : ''
-                    }`} 
-                  />
-                </button>
                 
-                {showAdvanced && (
-                  <div className="px-4 pb-4 space-y-4 border-t border-gray-200">
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-2">
-                        Resume/Background (Optional)
-                      </label>
-                      <textarea
-                        value={resume}
-                        onChange={(e) => setResume(e.target.value)}
-                        placeholder="Paste your resume or describe your background..."
-                        className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-none"
-                        rows={3}
-                      />
-                      <p className="mt-1 text-xs text-gray-500">
-                        This helps generate more relevant questions based on your experience
-                      </p>
+                <div className="space-y-4">
+                  <div className="flex items-start">
+                    <div className="flex-shrink-0 w-6 h-6 bg-blue-100 rounded-full flex items-center justify-center mt-0.5">
+                      <svg className="w-3 h-3 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 01-3-3V5a3 3 0 116 0v6a3 3 0 01-3 3z" />
+                      </svg>
                     </div>
-
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-2">
-                        Job Description (Optional)
-                      </label>
-                      <textarea
-                        value={jobDescription}
-                        onChange={(e) => setJobDescription(e.target.value)}
-                        placeholder="Paste the job description or role requirements..."
-                        className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-none"
-                        rows={3}
-                      />
-                      <p className="mt-1 text-xs text-gray-500">
-                        This helps tailor questions to the specific role you're interviewing for
-                      </p>
-                    </div>
-
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-2">
-                        Expected Interview Topics (Optional)
-                      </label>
-                      <textarea
-                        value={candidateAnalysis}
-                        onChange={(e) => setCandidateAnalysis(e.target.value)}
-                        placeholder="What topics do you expect to be asked about? Any specific areas you want to focus on?"
-                        className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-none"
-                        rows={3}
-                      />
-                      <p className="mt-1 text-xs text-gray-500">
-                        Your analysis of what topics are typically asked in this type of interview
+                    <div className="ml-3">
+                      <h4 className="text-sm font-medium text-gray-900">Use Voice Input</h4>
+                      <p className="mt-1 text-xs text-gray-600">
+                        Speak naturally to answer questions. Voice input provides a more authentic interview experience and helps you practice verbal communication skills.
                       </p>
                     </div>
                   </div>
-                )}
-              </div>
 
-              <button
-                onClick={generateQuestions}
-                disabled={loading || !subject.trim()}
-                className="btn-primary w-full flex items-center justify-center"
-              >
-                {loading ? (
-                  <>
-                    <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                    Generating Questions...
-                  </>
-                ) : (
-                  <>
-                    <Brain className="w-4 h-4 mr-2" />
-                    Generate Questions
-                  </>
-                )}
-              </button>
+                  <div className="flex items-start">
+                    <div className="flex-shrink-0 w-6 h-6 bg-purple-100 rounded-full flex items-center justify-center mt-0.5">
+                      <svg className="w-3 h-3 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z" />
+                      </svg>
+                    </div>
+                    <div className="ml-3">
+                      <h4 className="text-sm font-medium text-gray-900">Record Video for Review</h4>
+                      <p className="mt-1 text-xs text-gray-600">
+                        Enable video recording to review your body language, facial expressions, and overall presentation. This helps you identify areas for improvement.
+                      </p>
+                    </div>
+                  </div>
+
+                  <div className="flex items-start">
+                    <div className="flex-shrink-0 w-6 h-6 bg-red-100 rounded-full flex items-center justify-center mt-0.5">
+                      <svg className="w-3 h-3 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5.586 15H4a1 1 0 01-1-1v-4a1 1 0 011-1h1.586l4.707-4.707C10.923 3.663 12 4.109 12 5v14c0 .891-1.077 1.337-1.707.707L5.586 15z" />
+                      </svg>
+                    </div>
+                    <div className="ml-3">
+                      <h4 className="text-sm font-medium text-gray-900">Mute Your System</h4>
+                      <p className="mt-1 text-xs text-gray-600">
+                        Mute your computer speakers while recording video to avoid voice feedback issues and ensure clear audio quality in your recordings.
+                      </p>
+                    </div>
+                  </div>
+
+                  <div className="flex items-start">
+                    <div className="flex-shrink-0 w-6 h-6 bg-yellow-100 rounded-full flex items-center justify-center mt-0.5">
+                      <svg className="w-3 h-3 text-yellow-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                      </svg>
+                    </div>
+                    <div className="ml-3">
+                      <h4 className="text-sm font-medium text-gray-900">Take Your Time</h4>
+                      <p className="mt-1 text-xs text-gray-600">
+                        Don't rush your answers. Take a moment to think, structure your response, and speak clearly. Quality over speed.
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Main Form - Right Column */}
+            <div className="lg:col-span-2">
+              <div className="card">
+                <div className="space-y-6">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      Subject/Topic
+                    </label>
+                    <input
+                      type="text"
+                      value={subject}
+                      onChange={(e) => setSubject(e.target.value)}
+                      placeholder="e.g., React, System Design, Behavioral Questions"
+                      className="input-field"
+                    />
+                  </div>
+                  
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      Number of Questions
+                    </label>
+                    <select
+                      value={count}
+                      onChange={(e) => setCount(Number(e.target.value))}
+                      className="input-field"
+                    >
+                      <option value={3}>3 Questions</option>
+                      <option value={5}>5 Questions</option>
+                      <option value={10}>10 Questions</option>
+                    </select>
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      Question Types
+                    </label>
+                    <div className="space-y-2">
+                      <label className="flex items-center">
+                        <input
+                          type="checkbox"
+                          checked={selectedTypes.includes('behavioral')}
+                          onChange={(e) => setSelectedTypes(prev => e.target.checked ? [...prev, 'behavioral'] : prev.filter(t => t !== 'behavioral'))}
+                          className="mr-2"
+                        />
+                        Behavioral
+                      </label>
+                      <label className="flex items-center">
+                        <input
+                          type="checkbox"
+                          checked={selectedTypes.includes('technical')}
+                          onChange={(e) => setSelectedTypes(prev => e.target.checked ? [...prev, 'technical'] : prev.filter(t => t !== 'technical'))}
+                          className="mr-2"
+                        />
+                        Technical
+                      </label>
+                      <label className="flex items-center">
+                        <input
+                          type="checkbox"
+                          checked={selectedTypes.includes('situational')}
+                          onChange={(e) => setSelectedTypes(prev => e.target.checked ? [...prev, 'situational'] : prev.filter(t => t !== 'situational'))}
+                          className="mr-2"
+                        />
+                        Situational
+                      </label>
+                    </div>
+                  </div>
+
+                  {/* Advanced Section */}
+                  <div className="border border-gray-200 rounded-lg">
+                    <button
+                      type="button"
+                      onClick={() => setShowAdvanced(!showAdvanced)}
+                      className="w-full px-4 py-3 text-left flex items-center justify-between hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-inset"
+                    >
+                      <span className="text-sm font-medium text-gray-700">Advanced Options</span>
+                      <ChevronDown 
+                        className={`w-4 h-4 text-gray-500 transition-transform duration-200 ${
+                          showAdvanced ? 'rotate-180' : ''
+                        }`} 
+                      />
+                    </button>
+                    
+                    {showAdvanced && (
+                      <div className="px-4 pb-4 space-y-4 border-t border-gray-200">
+                        <div>
+                          <label className="block text-sm font-medium text-gray-700 mb-2">
+                            Resume/Background (Optional)
+                          </label>
+                          <textarea
+                            value={resume}
+                            onChange={(e) => setResume(e.target.value)}
+                            placeholder="Paste your resume or describe your background..."
+                            className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-none"
+                            rows={3}
+                          />
+                          <p className="mt-1 text-xs text-gray-500">
+                            This helps generate more relevant questions based on your experience
+                          </p>
+                        </div>
+
+                        <div>
+                          <label className="block text-sm font-medium text-gray-700 mb-2">
+                            Job Description (Optional)
+                          </label>
+                          <textarea
+                            value={jobDescription}
+                            onChange={(e) => setJobDescription(e.target.value)}
+                            placeholder="Paste the job description or role requirements..."
+                            className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-none"
+                            rows={3}
+                          />
+                          <p className="mt-1 text-xs text-gray-500">
+                            This helps tailor questions to the specific role you're interviewing for
+                          </p>
+                        </div>
+
+                        <div>
+                          <label className="block text-sm font-medium text-gray-700 mb-2">
+                            Expected Interview Topics (Optional)
+                          </label>
+                          <textarea
+                            value={candidateAnalysis}
+                            onChange={(e) => setCandidateAnalysis(e.target.value)}
+                            placeholder="What topics do you expect to be asked about? Any specific areas you want to focus on?"
+                            className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-none"
+                            rows={3}
+                          />
+                          <p className="mt-1 text-xs text-gray-500">
+                            Your analysis of what topics are typically asked in this type of interview
+                          </p>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+
+                  <button
+                    onClick={generateQuestions}
+                    disabled={loading || !subject.trim()}
+                    className="btn-primary w-full flex items-center justify-center"
+                  >
+                    {loading ? (
+                      <>
+                        <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                        Generating Questions...
+                      </>
+                    ) : (
+                      <>
+                        <Brain className="w-4 h-4 mr-2" />
+                        Generate Questions
+                      </>
+                    )}
+                  </button>
+                </div>
+              </div>
             </div>
           </div>
         </div>
