@@ -570,6 +570,33 @@ export default function NewPracticePage() {
                         />
                         Situational
                       </label>
+                      <label className="flex items-center">
+                        <input
+                          type="checkbox"
+                          checked={selectedTypes.includes('coding')}
+                          onChange={(e) => setSelectedTypes(prev => e.target.checked ? [...prev, 'coding'] : prev.filter(t => t !== 'coding'))}
+                          className="mr-2"
+                        />
+                        Coding
+                      </label>
+                      <label className="flex items-center">
+                        <input
+                          type="checkbox"
+                          checked={selectedTypes.includes('sql_query_writing')}
+                          onChange={(e) => setSelectedTypes(prev => e.target.checked ? [...prev, 'sql_query_writing'] : prev.filter(t => t !== 'sql_query_writing'))}
+                          className="mr-2"
+                        />
+                        SQL Query Writing
+                      </label>
+                      <label className="flex items-center">
+                        <input
+                          type="checkbox"
+                          checked={selectedTypes.includes('python_data_science')}
+                          onChange={(e) => setSelectedTypes(prev => e.target.checked ? [...prev, 'python_data_science'] : prev.filter(t => t !== 'python_data_science'))}
+                          className="mr-2"
+                        />
+                        Python Data Science
+                      </label>
                     </div>
                   </div>
 
@@ -681,6 +708,8 @@ export default function NewPracticePage() {
                 currentQuestion.type === 'technical' ? 'bg-green-100 text-green-800' :
                 currentQuestion.type === 'situational' ? 'bg-orange-100 text-orange-800' :
                 currentQuestion.type === 'coding' ? 'bg-purple-100 text-purple-800' :
+                currentQuestion.type === 'sql_query_writing' ? 'bg-indigo-100 text-indigo-800' :
+                currentQuestion.type === 'python_data_science' ? 'bg-teal-100 text-teal-800' :
                 'bg-gray-100 text-gray-800'
               }`}>
                 {currentQuestion.type.charAt(0).toUpperCase() + currentQuestion.type.slice(1)}

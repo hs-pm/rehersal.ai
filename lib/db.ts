@@ -11,7 +11,7 @@ const pool = new Pool({
 export interface Question {
   id: string
   question: string
-  type: 'behavioral' | 'technical' | 'situational' | 'coding'
+  type: 'behavioral' | 'technical' | 'situational' | 'coding' | 'sql_query_writing' | 'python_data_science'
   category: string
   created_at: Date
 }
@@ -57,7 +57,7 @@ export async function createTables() {
       CREATE TABLE IF NOT EXISTS questions (
         id SERIAL PRIMARY KEY,
         question TEXT NOT NULL,
-        type VARCHAR(20) NOT NULL CHECK (type IN ('behavioral', 'technical', 'situational', 'coding')),
+        type VARCHAR(20) NOT NULL CHECK (type IN ('behavioral', 'technical', 'situational', 'coding', 'sql_query_writing', 'python_data_science')),
         category VARCHAR(100) NOT NULL,
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
       )

@@ -8,7 +8,7 @@ const groq = new Groq({
 export interface Question {
   id: string
   question: string
-  type: 'behavioral' | 'technical' | 'situational' | 'coding'
+  type: 'behavioral' | 'technical' | 'situational' | 'coding' | 'sql_query_writing' | 'python_data_science'
   category: string
 }
 
@@ -29,7 +29,7 @@ export interface Evaluation {
 }
 
 // Helper: Normalize and validate question type
-const VALID_TYPES = ['behavioral', 'technical', 'situational', 'coding'] as const;
+const VALID_TYPES = ['behavioral', 'technical', 'situational', 'coding', 'sql_query_writing', 'python_data_science'] as const;
 type ValidType = typeof VALID_TYPES[number];
 function normalizeType(type: any, fallback: ValidType): ValidType {
   if (typeof type !== 'string') return fallback;

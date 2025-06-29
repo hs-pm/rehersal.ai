@@ -401,6 +401,163 @@ Return ONLY a valid JSON object with this exact structure:
 }
 
 Do NOT include any other text or formatting. Only return the JSON object.`
+  },
+
+  sql_query_writing: {
+    generator: `You are an expert SQL interviewer. Generate {count} high-quality SQL query writing questions for the subject "{subject}".
+
+IMPORTANT: These must be SQL QUERY WRITING questions that require candidates to write actual SQL code, NOT theoretical questions about SQL concepts.
+
+SQL Query Writing questions should:
+- Present a specific scenario or requirement that needs a SQL solution
+- Ask candidates to write complete, executable SQL queries
+- Test understanding of SELECT, JOIN, WHERE, GROUP BY, ORDER BY, and other SQL clauses
+- Include realistic table structures and data scenarios
+- Vary in complexity from basic to advanced queries
+- Focus on practical, real-world database scenarios
+
+Generate questions that ask candidates to:
+- Write SELECT queries with various conditions and filters
+- Create queries with JOINs (INNER, LEFT, RIGHT, FULL)
+- Use aggregate functions (COUNT, SUM, AVG, MAX, MIN)
+- Implement GROUP BY and HAVING clauses
+- Write subqueries and CTEs (Common Table Expressions)
+- Handle data manipulation scenarios
+- Optimize queries for performance
+
+{contextSection}
+
+PERSONALIZATION GUIDELINES:
+- Focus on database technologies and SQL skills mentioned in the candidate's background
+- Align with the database requirements of the job description
+- Create questions that test the specific SQL skills needed for the role
+- Consider the candidate's experience level based on their background
+- Include questions about databases they've worked with
+
+Return ONLY a valid JSON object with this exact structure:
+{
+  "questions": [
+    {"id": "1", "question": "Your SQL query writing question here", "type": "sql_query_writing", "category": "subject"},
+    {"id": "2", "question": "Your SQL query writing question here", "type": "sql_query_writing", "category": "subject"}
+  ]
+}
+
+Do NOT include any other text, formatting, or explanations. Only return the JSON object.`,
+
+    evaluator: `You are evaluating a SQL query writing response. Assess the candidate's SQL code based on the following criteria:
+
+**Evaluation Criteria:**
+- **Correctness**: Does the query produce the expected results?
+- **Syntax**: Is the SQL syntax correct and follows best practices?
+- **Efficiency**: Is the query optimized and well-structured?
+- **Completeness**: Does the query address all requirements?
+- **Readability**: Is the code clear and well-formatted?
+
+**Scoring Guide:**
+- 90-100: Perfect syntax, optimal performance, clear formatting, meets all requirements
+- 80-89: Correct syntax, good performance, readable code, meets most requirements
+- 70-79: Mostly correct syntax, acceptable performance, some formatting issues
+- 60-69: Some syntax errors, inefficient queries, unclear formatting
+- Below 60: Major syntax errors, poor performance, unclear or incomplete code
+
+**Response Format:**
+Return ONLY a valid JSON object with this exact structure:
+{
+  "score": number (0-100),
+  "feedback": "Detailed feedback explaining the score",
+  "strengths": ["strength1", "strength2"],
+  "improvements": ["improvement1", "improvement2"],
+  "timeline_analysis": {
+    "clarity": number (1-10),
+    "confidence": number (1-10),
+    "technical_depth": number (1-10),
+    "communication": number (1-10),
+    "structure": number (1-10),
+    "engagement": number (1-10),
+    "completeness": number (1-10)
+  }
+}
+
+Do NOT include any other text or formatting. Only return the JSON object.`
+  },
+
+  python_data_science: {
+    generator: `You are an expert Python Data Science interviewer. Generate {count} high-quality Python data science questions for the subject "{subject}".
+
+IMPORTANT: These must be PYTHON DATA SCIENCE questions that test data handling and manipulation skills, NOT general Python programming.
+
+Python Data Science questions should:
+- Focus on data manipulation, analysis, and visualization using Python
+- Test knowledge of pandas, numpy, matplotlib, seaborn, and other data science libraries
+- Include realistic data scenarios and datasets
+- Ask for code solutions to data science problems
+- Cover data cleaning, transformation, analysis, and visualization
+- Test understanding of data structures and algorithms for data science
+
+Generate questions that ask candidates to:
+- Write pandas code for data manipulation and analysis
+- Create data visualizations using matplotlib or seaborn
+- Handle missing data and data cleaning tasks
+- Perform statistical analysis and calculations
+- Work with different data formats (CSV, JSON, Excel)
+- Implement machine learning preprocessing steps
+- Optimize data processing workflows
+- Debug and troubleshoot data science code
+
+{contextSection}
+
+PERSONALIZATION GUIDELINES:
+- Focus on data science tools and libraries mentioned in the candidate's background
+- Align with the data science requirements of the job description
+- Create questions that test the specific Python data science skills needed
+- Consider the candidate's experience level with data science tools
+- Include questions about datasets and analysis they've worked with
+
+Return ONLY a valid JSON object with this exact structure:
+{
+  "questions": [
+    {"id": "1", "question": "Your Python data science question here", "type": "python_data_science", "category": "subject"},
+    {"id": "2", "question": "Your Python data science question here", "type": "python_data_science", "category": "subject"}
+  ]
+}
+
+Do NOT include any other text, formatting, or explanations. Only return the JSON object.`,
+
+    evaluator: `You are evaluating a Python data science response. Assess the candidate's code and approach based on the following criteria:
+
+**Evaluation Criteria:**
+- **Correctness**: Does the code produce the expected results?
+- **Python Best Practices**: Does the code follow Python conventions and best practices?
+- **Data Science Knowledge**: Does the candidate demonstrate understanding of data science concepts?
+- **Code Quality**: Is the code readable, efficient, and well-structured?
+- **Problem Solving**: Does the approach effectively solve the data science problem?
+
+**Scoring Guide:**
+- 90-100: Perfect code, excellent data science knowledge, optimal approach, clear documentation
+- 80-89: Correct code, good data science understanding, effective approach, readable code
+- 70-79: Mostly correct code, basic data science knowledge, acceptable approach
+- 60-69: Some errors, limited data science understanding, inefficient approach
+- Below 60: Major errors, poor understanding, ineffective or incorrect approach
+
+**Response Format:**
+Return ONLY a valid JSON object with this exact structure:
+{
+  "score": number (0-100),
+  "feedback": "Detailed feedback explaining the score",
+  "strengths": ["strength1", "strength2"],
+  "improvements": ["improvement1", "improvement2"],
+  "timeline_analysis": {
+    "clarity": number (1-10),
+    "confidence": number (1-10),
+    "technical_depth": number (1-10),
+    "communication": number (1-10),
+    "structure": number (1-10),
+    "engagement": number (1-10),
+    "completeness": number (1-10)
+  }
+}
+
+Do NOT include any other text or formatting. Only return the JSON object.`
   }
 };
 
