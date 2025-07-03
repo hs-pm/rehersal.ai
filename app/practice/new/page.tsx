@@ -751,7 +751,7 @@ export default function NewPracticePage() {
                       onClick={() => setShowAdvanced(!showAdvanced)}
                       className="w-full px-4 py-3 text-left flex items-center justify-between hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-inset"
                     >
-                      <span className="text-sm font-medium text-gray-700">Advanced Options</span>
+                      <span className="text-sm font-medium text-gray-700">Advanced Options (Resume, Job Description & Preferred Questions)</span>
                       <ChevronDown 
                         className={`w-4 h-4 text-gray-500 transition-transform duration-200 ${
                           showAdvanced ? 'rotate-180' : ''
