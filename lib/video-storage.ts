@@ -1,112 +1,97 @@
 import { put, del } from '@vercel/blob';
+import { isFeatureEnabled } from './feature-flags';
 
-interface VideoConfig {
-  quality: 'low' | 'medium' | 'high';
-  maxDuration: number; // in seconds
-  maxSize: number; // in MB
-  format: 'webm' | 'mp4';
-}
-
-// Cost-efficient video configuration for Vercel Hobby
-const VIDEO_CONFIG: VideoConfig = {
-  quality: 'low', // 480p or lower
-  maxDuration: 120, // 2 minutes max
-  maxSize: 10, // 10MB max per video
-  format: 'webm' // Smaller file size than MP4
-};
-
-interface SessionVideo {
+export interface VideoMetadata {
   id: string;
   sessionId: string;
   questionId: string;
   url: string;
   size: number;
-  duration: number;
+  duration?: number;
   createdAt: Date;
-  expiresAt: Date; // Auto-delete after session ends
+  expiresAt: Date;
 }
 
-class VideoStorage {
-  private sessionVideos = new Map<string, SessionVideo>();
+export class VideoStorage {
+  private static instance: VideoStorage;
+  
+  private constructor() {}
+  
+  static getInstance(): VideoStorage {
+    if (!VideoStorage.instance) {
+      VideoStorage.instance = new VideoStorage();
+    }
+    return VideoStorage.instance;
+  }
 
-  // Store video for current session only
-  async storeSessionVideo(
+  async uploadVideo(
+    file: File,
     sessionId: string,
-    questionId: string,
-    videoBlob: Blob
-  ): Promise<SessionVideo> {
-    // Validate video size and duration
-    if (videoBlob.size > VIDEO_CONFIG.maxSize * 1024 * 1024) {
-      throw new Error(`Video too large. Max size: ${VIDEO_CONFIG.maxSize}MB`);
+    questionId: string
+  ): Promise<VideoMetadata> {
+    if (!isFeatureEnabled('VIDEO_STORAGE')) {
+      throw new Error('Video storage is not enabled');
     }
 
-    const videoId = `${sessionId}-${questionId}-${Date.now()}`;
-    const fileName = `${videoId}.${VIDEO_CONFIG.format}`;
+    try {
+      // Generate unique video ID
+      const videoId = `video_${sessionId}_${questionId}_${Date.now()}`;
+      
+      // Upload to Vercel Blob
+      const blob = await put(videoId, file, {
+        access: 'public',
+        addRandomSuffix: false,
+      });
 
-    // Upload to Vercel Blob with low quality
-    const { url } = await put(fileName, videoBlob, {
-      access: 'public',
-      addRandomSuffix: false
-    });
+      // Calculate expiration (24 hours from now)
+      const expiresAt = new Date();
+      expiresAt.setHours(expiresAt.getHours() + 24);
 
-    const video: SessionVideo = {
-      id: videoId,
-      sessionId,
-      questionId,
-      url,
-      size: videoBlob.size,
-      duration: 0, // Would need to extract from video metadata
-      createdAt: new Date(),
-      expiresAt: new Date(Date.now() + 24 * 60 * 60 * 1000) // 24 hours
-    };
+      const metadata: VideoMetadata = {
+        id: videoId,
+        sessionId,
+        questionId,
+        url: blob.url,
+        size: file.size,
+        createdAt: new Date(),
+        expiresAt,
+      };
 
-    this.sessionVideos.set(videoId, video);
-    return video;
+      return metadata;
+    } catch (error) {
+      console.error('Error uploading video:', error);
+      throw new Error('Failed to upload video');
+    }
   }
 
-  // Get video for current session
-  getSessionVideo(sessionId: string, questionId: string): SessionVideo | undefined {
-    const videoId = `${sessionId}-${questionId}`;
-    return Array.from(this.sessionVideos.values()).find(
-      v => v.sessionId === sessionId && v.questionId === questionId
-    );
+  async deleteVideo(videoId: string): Promise<void> {
+    if (!isFeatureEnabled('VIDEO_STORAGE')) {
+      return;
+    }
+
+    try {
+      await del(videoId);
+    } catch (error) {
+      console.error('Error deleting video:', error);
+      // Don't throw error for cleanup failures
+    }
   }
 
-  // Clean up expired videos
   async cleanupExpiredVideos(): Promise<void> {
-    const now = new Date();
-    const expiredVideos = Array.from(this.sessionVideos.values()).filter(
-      v => v.expiresAt < now
-    );
-
-    for (const video of expiredVideos) {
-      try {
-        await del(video.url);
-        this.sessionVideos.delete(video.id);
-      } catch (error) {
-        console.error(`Failed to delete expired video ${video.id}:`, error);
-      }
+    if (!isFeatureEnabled('VIDEO_STORAGE')) {
+      return;
     }
+
+    // This would typically query a database for expired videos
+    // For now, we'll implement this in the cleanup API route
+    console.log('Video cleanup triggered');
   }
 
-  // Get download URL for user
-  getDownloadUrl(videoId: string): string | null {
-    const video = this.sessionVideos.get(videoId);
-    return video ? video.url : null;
-  }
-
-  // Get session storage usage
-  getSessionUsage(sessionId: string): { totalSize: number; videoCount: number } {
-    const sessionVideos = Array.from(this.sessionVideos.values()).filter(
-      v => v.sessionId === sessionId
-    );
-
-    return {
-      totalSize: sessionVideos.reduce((sum, v) => sum + v.size, 0),
-      videoCount: sessionVideos.length
-    };
+  getVideoUrl(videoId: string): string {
+    // For Vercel Blob, the URL is constructed as:
+    // https://{blob-store}.public.blob.vercel-storage.com/{videoId}
+    return `https://${process.env.BLOB_READ_WRITE_TOKEN?.split('_')[0]}.public.blob.vercel-storage.com/${videoId}`;
   }
 }
 
-export const videoStorage = new VideoStorage();
-export { VIDEO_CONFIG }; 
+export const videoStorage = VideoStorage.getInstance(); 

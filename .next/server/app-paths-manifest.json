@@ -1,1 +1,3 @@
-{}
+{
+  "/api/questions/generate/route": "app/api/questions/generate/route.js"
+}

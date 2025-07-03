@@ -18,7 +18,7 @@ export default function VideoIntegration({
   onVideoUploaded,
   onError
 }: VideoIntegrationProps) {
-  const [recordedVideo, setRecordedVideo] = useState<Blob | null>(null);
+  const [recordedVideo, setRecordedVideo] = useState<File | null>(null);
   const [videoUrl, setVideoUrl] = useState<string>('');
   const [isUploading, setIsUploading] = useState(false);
   const [uploadedVideoId, setUploadedVideoId] = useState<string>('');
@@ -28,20 +28,20 @@ export default function VideoIntegration({
   const videoStorageEnabled = isFeatureEnabled('VIDEO_STORAGE');
   const videoPlaybackEnabled = isFeatureEnabled('VIDEO_PLAYBACK');
 
-  const handleRecordingComplete = async (blob: Blob) => {
-    setRecordedVideo(blob);
+  const handleRecordingComplete = async (file: File) => {
+    setRecordedVideo(file);
     
     // Create temporary URL for preview
-    const url = URL.createObjectURL(blob);
+    const url = URL.createObjectURL(file);
     setVideoUrl(url);
 
     // Auto-upload if storage is enabled
     if (videoStorageEnabled) {
-      await uploadVideo(blob);
+      await uploadVideo(file);
     }
   };
 
-  const uploadVideo = async (blob: Blob) => {
+  const uploadVideo = async (file: File) => {
     if (!videoStorageEnabled) {
       onError?.('Video storage is not enabled');
       return;
@@ -51,7 +51,7 @@ export default function VideoIntegration({
       setIsUploading(true);
 
       const formData = new FormData();
-      formData.append('video', blob, 'interview-response.webm');
+      formData.append('video', file);
       formData.append('sessionId', sessionId);
       formData.append('questionId', questionId);
 

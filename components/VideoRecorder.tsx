@@ -2,10 +2,10 @@
 
 import React, { useRef, useState, useCallback } from 'react';
 import { Square, Video, Loader2 } from 'lucide-react';
-import { isFeatureEnabled } from '@/lib/feature-flags';
+import { isFeatureEnabled } from '../lib/feature-flags';
 
 interface VideoRecorderProps {
-  onRecordingComplete: (blob: Blob) => void;
+  onRecordingComplete: (file: File) => void;
   onError: (error: string) => void;
   disabled?: boolean;
 }
@@ -73,7 +73,11 @@ export default function VideoRecorder({
 
       mediaRecorder.onstop = () => {
         const blob = new Blob(recordedChunks, { type: 'video/webm' });
-        onRecordingComplete(blob);
+        // Convert blob to file
+        const file = new File([blob], `recording-${Date.now()}.webm`, {
+          type: 'video/webm'
+        });
+        onRecordingComplete(file);
         
         // Clean up stream
         if (streamRef.current) {

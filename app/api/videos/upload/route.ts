@@ -41,11 +41,8 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Convert File to Blob
-    const videoBlob = new Blob([videoFile], { type: videoFile.type });
-
-    // Store video for session
-    const video = await videoStorage.storeSessionVideo(sessionId, questionId, videoBlob);
+    // Upload video using the new storage interface
+    const video = await videoStorage.uploadVideo(videoFile, sessionId, questionId);
 
     return NextResponse.json({
       success: true,
@@ -76,43 +73,10 @@ export async function POST(request: NextRequest) {
 }
 
 export async function GET(request: NextRequest) {
-  try {
-    const { searchParams } = new URL(request.url);
-    const sessionId = searchParams.get('sessionId');
-    const questionId = searchParams.get('questionId');
-
-    if (!sessionId || !questionId) {
-      return NextResponse.json(
-        { error: 'Missing sessionId or questionId' },
-        { status: 400 }
-      );
-    }
-
-    const video = videoStorage.getSessionVideo(sessionId, questionId);
-    
-    if (!video) {
-      return NextResponse.json(
-        { error: 'Video not found' },
-        { status: 404 }
-      );
-    }
-
-    return NextResponse.json({
-      success: true,
-      video: {
-        id: video.id,
-        url: video.url,
-        size: video.size,
-        duration: video.duration,
-        expiresAt: video.expiresAt
-      }
-    });
-
-  } catch (error) {
-    console.error('Error retrieving video:', error);
-    return NextResponse.json(
-      { error: 'Failed to retrieve video' },
-      { status: 500 }
-    );
-  }
+  // For now, we'll return a simple response since we don't have a database
+  // to store video metadata. In a full implementation, you'd query the database.
+  return NextResponse.json(
+    { error: 'Video retrieval not implemented yet' },
+    { status: 501 }
+  );
 } 
