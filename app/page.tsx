@@ -27,8 +27,8 @@ export default function HomePage() {
               <h1 className="text-2xl font-bold text-gray-900">AI Interview Practice</h1>
             </div>
             <nav className="flex space-x-8">
-              <Link href="/dashboard" className="text-gray-600 hover:text-primary-600 transition-colors">
-                Dashboard
+              <Link href="/about" className="text-gray-600 hover:text-primary-600 transition-colors">
+                About Harshit
               </Link>
               <Link href="/practice" className="text-gray-600 hover:text-primary-600 transition-colors">
                 Practice
