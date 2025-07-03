@@ -10,7 +10,10 @@ import {
   BarChart3, 
   Plus,
   Brain,
-  Clock
+  Clock,
+  Sparkles,
+  MessageSquare,
+  UserCheck
 } from 'lucide-react'
 
 export default function HomePage() {
@@ -53,37 +56,71 @@ export default function HomePage() {
         </div>
 
         {/* Features Grid */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8 mb-16">
-          <div className="card text-center">
-            <div className="w-12 h-12 bg-blue-100 rounded-lg flex items-center justify-center mx-auto mb-4">
-              <Plus className="w-6 h-6 text-blue-600" />
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 mb-16">
+          <div className="card text-center relative group hover:scale-105 transition-transform duration-300">
+            <div className="absolute -top-2 -right-2 opacity-0 group-hover:opacity-100 transition-opacity duration-300">
+              <Sparkles className="w-6 h-6 text-yellow-500 animate-pulse" />
             </div>
-            <h3 className="text-lg font-semibold text-gray-900 mb-2">Custom Questions</h3>
-            <p className="text-gray-600">Add your own questions or let AI generate practice questions for any subject.</p>
+            <div className="w-12 h-12 bg-gradient-to-br from-blue-400 to-blue-600 rounded-lg flex items-center justify-center mx-auto mb-4 shadow-lg">
+              <UserCheck className="w-6 h-6 text-white" />
+            </div>
+            <h3 className="text-lg font-semibold text-gray-900 mb-2">Simulate Real Interview Experience</h3>
+            <p className="text-gray-600">Practice in an environment that mimics actual interview conditions with realistic questions and feedback.</p>
           </div>
 
-          <div className="card text-center">
-            <div className="w-12 h-12 bg-green-100 rounded-lg flex items-center justify-center mx-auto mb-4">
-              <Mic className="w-6 h-6 text-green-600" />
+          <div className="card text-center relative group hover:scale-105 transition-transform duration-300">
+            <div className="absolute -top-2 -right-2 opacity-0 group-hover:opacity-100 transition-opacity duration-300">
+              <Sparkles className="w-6 h-6 text-yellow-500 animate-pulse" />
             </div>
-            <h3 className="text-lg font-semibold text-gray-900 mb-2">Audio Recording</h3>
-            <p className="text-gray-600">Record your voice responses and get them transcribed automatically.</p>
+            <div className="w-12 h-12 bg-gradient-to-br from-green-400 to-green-600 rounded-lg flex items-center justify-center mx-auto mb-4 shadow-lg">
+              <Brain className="w-6 h-6 text-white" />
+            </div>
+            <h3 className="text-lg font-semibold text-gray-900 mb-2">AI-Generated Questions</h3>
+            <p className="text-gray-600">Get questions tailored to your resume or job description for highly relevant practice sessions.</p>
           </div>
 
-          <div className="card text-center">
-            <div className="w-12 h-12 bg-purple-100 rounded-lg flex items-center justify-center mx-auto mb-4">
-              <Video className="w-6 h-6 text-purple-600" />
+          <div className="card text-center relative group hover:scale-105 transition-transform duration-300">
+            <div className="absolute -top-2 -right-2 opacity-0 group-hover:opacity-100 transition-opacity duration-300">
+              <Sparkles className="w-6 h-6 text-yellow-500 animate-pulse" />
             </div>
-            <h3 className="text-lg font-semibold text-gray-900 mb-2">Video Recording</h3>
-            <p className="text-gray-600">Record video responses to practice body language and presentation skills.</p>
+            <div className="w-12 h-12 bg-gradient-to-br from-purple-400 to-purple-600 rounded-lg flex items-center justify-center mx-auto mb-4 shadow-lg">
+              <Mic className="w-6 h-6 text-white" />
+            </div>
+            <h3 className="text-lg font-semibold text-gray-900 mb-2">Speech or Text Responses</h3>
+            <p className="text-gray-600">Answer questions naturally through voice recording or type your responses - your choice!</p>
           </div>
 
-          <div className="card text-center">
-            <div className="w-12 h-12 bg-orange-100 rounded-lg flex items-center justify-center mx-auto mb-4">
-              <BarChart3 className="w-6 h-6 text-orange-600" />
+          <div className="card text-center relative group hover:scale-105 transition-transform duration-300">
+            <div className="absolute -top-2 -right-2 opacity-0 group-hover:opacity-100 transition-opacity duration-300">
+              <Sparkles className="w-6 h-6 text-yellow-500 animate-pulse" />
             </div>
-            <h3 className="text-lg font-semibold text-gray-900 mb-2">AI Analysis</h3>
-            <p className="text-gray-600">Get detailed feedback and scoring on your responses with timeline analysis.</p>
+            <div className="w-12 h-12 bg-gradient-to-br from-orange-400 to-orange-600 rounded-lg flex items-center justify-center mx-auto mb-4 shadow-lg">
+              <Video className="w-6 h-6 text-white" />
+            </div>
+            <h3 className="text-lg font-semibold text-gray-900 mb-2">Video Self-Analysis</h3>
+            <p className="text-gray-600">Record video responses to analyze your body language, presentation skills, and overall delivery.</p>
+          </div>
+
+          <div className="card text-center relative group hover:scale-105 transition-transform duration-300">
+            <div className="absolute -top-2 -right-2 opacity-0 group-hover:opacity-100 transition-opacity duration-300">
+              <Sparkles className="w-6 h-6 text-yellow-500 animate-pulse" />
+            </div>
+            <div className="w-12 h-12 bg-gradient-to-br from-pink-400 to-pink-600 rounded-lg flex items-center justify-center mx-auto mb-4 shadow-lg">
+              <MessageSquare className="w-6 h-6 text-white" />
+            </div>
+            <h3 className="text-lg font-semibold text-gray-900 mb-2">AI Clarifying Questions</h3>
+            <p className="text-gray-600">Ask for guidance and get clarifying questions from AI, just like a real interviewer would provide.</p>
+          </div>
+
+          <div className="card text-center relative group hover:scale-105 transition-transform duration-300">
+            <div className="absolute -top-2 -right-2 opacity-0 group-hover:opacity-100 transition-opacity duration-300">
+              <Sparkles className="w-6 h-6 text-yellow-500 animate-pulse" />
+            </div>
+            <div className="w-12 h-12 bg-gradient-to-br from-indigo-400 to-indigo-600 rounded-lg flex items-center justify-center mx-auto mb-4 shadow-lg">
+              <BarChart3 className="w-6 h-6 text-white" />
+            </div>
+            <h3 className="text-lg font-semibold text-gray-900 mb-2">Detailed Performance Analysis</h3>
+            <p className="text-gray-600">Receive comprehensive feedback with scoring, strengths, and improvement suggestions.</p>
           </div>
         </div>
 

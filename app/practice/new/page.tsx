@@ -952,6 +952,31 @@ export default function NewPracticePage() {
 
           {/* Response Section - Full Width */}
           <div className="bg-white rounded-lg shadow-md p-6 lg:p-8 space-y-6">
+            
+            {/* Input Method Clarifications */}
+            <div className="bg-gradient-to-r from-blue-50 to-purple-50 border border-blue-200 rounded-lg p-4 mb-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="flex items-start space-x-3">
+                  <div className="w-8 h-8 bg-blue-500 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5">
+                    <Brain className="w-4 h-4 text-white" />
+                  </div>
+                  <div>
+                    <h4 className="font-semibold text-blue-800 mb-1">Use Speech and Text Inputs for AI Evaluation</h4>
+                    <p className="text-sm text-blue-700">Your voice recordings and text responses will be analyzed by AI to provide detailed feedback, scoring, and improvement suggestions.</p>
+                  </div>
+                </div>
+                <div className="flex items-start space-x-3">
+                  <div className="w-8 h-8 bg-green-500 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5">
+                    <Video className="w-4 h-4 text-white" />
+                  </div>
+                  <div>
+                    <h4 className="font-semibold text-green-800 mb-1">Use Video for Self Evaluation</h4>
+                    <p className="text-sm text-green-700">Video recordings are for your personal review to analyze body language, facial expressions, and presentation skills.</p>
+                  </div>
+                </div>
+              </div>
+            </div>
+
             {/* Recording Controls Row - Horizontal Ribbon */}
             <div className="bg-gray-50 rounded-lg border border-gray-200 p-4">
               <div className="flex flex-col sm:flex-row gap-3">
@@ -1118,12 +1143,12 @@ export default function NewPracticePage() {
             {/* Text Input Area - Reduced vertical size */}
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">
-                Text Response {speechSupported && '(or use voice above)'}
+                Text Response {speechSupported && '(or use voice above)'} - For AI Evaluation
               </label>
               <textarea
                 value={textResponse}
                 onChange={(e) => setTextResponse(e.target.value)}
-                placeholder="Type your response here... You can also use voice input or video recording above."
+                placeholder="Type your response here for AI analysis... You can also use voice input above for the same purpose."
                 className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-none transition-all duration-200"
                 rows={Math.max(2, Math.min(6, textResponse.split('\n').length + 1))}
                 style={{ minHeight: '60px', maxHeight: '160px' }}
@@ -1148,7 +1173,7 @@ export default function NewPracticePage() {
               ) : (
                 <>
                   <Send className="mr-2" size={24} />
-                  Submit Response
+                  Submit for AI Evaluation
                 </>
               )}
             </button>
