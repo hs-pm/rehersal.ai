@@ -1,7 +1,16 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { videoStorage } from '../../../../lib/video-storage';
+import { isFeatureEnabled } from '../../../../lib/feature-flags';
 
 export async function POST(request: NextRequest) {
+  // Check if video storage is enabled
+  if (!isFeatureEnabled('VIDEO_STORAGE')) {
+    return NextResponse.json(
+      { error: 'Video storage is not enabled' },
+      { status: 403 }
+    );
+  }
+
   try {
     const formData = await request.formData();
     const sessionId = formData.get('sessionId') as string;
@@ -19,6 +28,15 @@ export async function POST(request: NextRequest) {
     if (!videoFile.type.startsWith('video/')) {
       return NextResponse.json(
         { error: 'Invalid file type. Only video files are allowed.' },
+        { status: 400 }
+      );
+    }
+
+    // Validate file size (max 50MB for demo)
+    const maxSize = 50 * 1024 * 1024; // 50MB
+    if (videoFile.size > maxSize) {
+      return NextResponse.json(
+        { error: 'File too large. Maximum size is 50MB.' },
         { status: 400 }
       );
     }

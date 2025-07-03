@@ -1,39 +1,39 @@
 'use client';
 
-import React, { useState, useRef, useCallback } from 'react';
-import { VIDEO_CONFIG } from '../lib/video-storage';
+import React, { useRef, useState, useCallback } from 'react';
+import { Square, Video, Loader2 } from 'lucide-react';
+import { isFeatureEnabled } from '@/lib/feature-flags';
 
 interface VideoRecorderProps {
-  onVideoRecorded: (blob: Blob) => void;
+  onRecordingComplete: (blob: Blob) => void;
   onError: (error: string) => void;
-  maxDuration?: number;
+  disabled?: boolean;
 }
 
 export default function VideoRecorder({ 
-  onVideoRecorded, 
+  onRecordingComplete, 
   onError, 
-  maxDuration = VIDEO_CONFIG.maxDuration 
+  disabled = false 
 }: VideoRecorderProps) {
-  const [isRecording, setIsRecording] = useState(false);
-  const [isPaused, setIsPaused] = useState(false);
-  const [recordingTime, setRecordingTime] = useState(0);
-  const [isSupported, setIsSupported] = useState(true);
-  
+  const videoRef = useRef<HTMLVideoElement>(null);
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const streamRef = useRef<MediaStream | null>(null);
-  const chunksRef = useRef<Blob[]>([]);
-  const timerRef = useRef<NodeJS.Timeout | null>(null);
+  const [isRecording, setIsRecording] = useState(false);
+  const [isStarting, setIsStarting] = useState(false);
+  const [recordedChunks, setRecordedChunks] = useState<Blob[]>([]);
 
-  // Check browser support
-  useState(() => {
-    if (!navigator.mediaDevices || !window.MediaRecorder) {
-      setIsSupported(false);
-      onError('Video recording is not supported in this browser');
-    }
-  });
+  // Check if video recording is enabled
+  const videoEnabled = isFeatureEnabled('VIDEO_RECORDING') && !disabled;
 
   const startRecording = useCallback(async () => {
+    if (!videoEnabled) {
+      onError('Video recording is not enabled');
+      return;
+    }
+
     try {
+      setIsStarting(true);
+      
       // Request low-quality video stream
       const stream = await navigator.mediaDevices.getUserMedia({
         video: {
@@ -50,9 +50,12 @@ export default function VideoRecorder({
       });
 
       streamRef.current = stream;
-      chunksRef.current = [];
+      
+      if (videoRef.current) {
+        videoRef.current.srcObject = stream;
+      }
 
-      // Create MediaRecorder with low quality settings
+      // Create MediaRecorder with low-quality settings
       const mediaRecorder = new MediaRecorder(stream, {
         mimeType: 'video/webm;codecs=vp8,opus',
         videoBitsPerSecond: 500000, // 500 kbps for low quality
@@ -60,170 +63,111 @@ export default function VideoRecorder({
       });
 
       mediaRecorderRef.current = mediaRecorder;
+      setRecordedChunks([]);
 
       mediaRecorder.ondataavailable = (event) => {
         if (event.data.size > 0) {
-          chunksRef.current.push(event.data);
+          setRecordedChunks(prev => [...prev, event.data]);
         }
       };
 
       mediaRecorder.onstop = () => {
-        const blob = new Blob(chunksRef.current, { type: 'video/webm' });
+        const blob = new Blob(recordedChunks, { type: 'video/webm' });
+        onRecordingComplete(blob);
         
-        // Check file size
-        if (blob.size > VIDEO_CONFIG.maxSize * 1024 * 1024) {
-          onError(`Video too large (${(blob.size / 1024 / 1024).toFixed(1)}MB). Max size: ${VIDEO_CONFIG.maxSize}MB`);
-          return;
-        }
-
-        onVideoRecorded(blob);
-        
-        // Clean up
+        // Clean up stream
         if (streamRef.current) {
           streamRef.current.getTracks().forEach(track => track.stop());
+          streamRef.current = null;
         }
-        chunksRef.current = [];
-        setRecordingTime(0);
       };
 
-      mediaRecorder.start(1000); // Collect data every second
+      mediaRecorder.start();
       setIsRecording(true);
-      setIsPaused(false);
-
-      // Start timer
-      timerRef.current = setInterval(() => {
-        setRecordingTime(prev => {
-          if (prev >= maxDuration) {
-            stopRecording();
-            return prev;
-          }
-          return prev + 1;
-        });
-      }, 1000);
-
     } catch (error) {
       console.error('Error starting recording:', error);
-      onError('Failed to start video recording. Please check camera permissions.');
+      onError('Failed to start recording. Please check camera permissions.');
+    } finally {
+      setIsStarting(false);
     }
-  }, [maxDuration, onVideoRecorded, onError]);
+  }, [videoEnabled, onRecordingComplete, onError]);
 
   const stopRecording = useCallback(() => {
     if (mediaRecorderRef.current && isRecording) {
       mediaRecorderRef.current.stop();
       setIsRecording(false);
-      setIsPaused(false);
-      
-      if (timerRef.current) {
-        clearInterval(timerRef.current);
-        timerRef.current = null;
-      }
     }
   }, [isRecording]);
 
-  const pauseRecording = useCallback(() => {
-    if (mediaRecorderRef.current && isRecording && !isPaused) {
-      mediaRecorderRef.current.pause();
-      setIsPaused(true);
-      
-      if (timerRef.current) {
-        clearInterval(timerRef.current);
-        timerRef.current = null;
-      }
-    }
-  }, [isRecording, isPaused]);
-
-  const resumeRecording = useCallback(() => {
-    if (mediaRecorderRef.current && isRecording && isPaused) {
-      mediaRecorderRef.current.resume();
-      setIsPaused(false);
-      
-      timerRef.current = setInterval(() => {
-        setRecordingTime(prev => {
-          if (prev >= maxDuration) {
-            stopRecording();
-            return prev;
-          }
-          return prev + 1;
-        });
-      }, 1000);
-    }
-  }, [isRecording, isPaused, maxDuration, stopRecording]);
-
-  const formatTime = (seconds: number): string => {
-    const mins = Math.floor(seconds / 60);
-    const secs = seconds % 60;
-    return `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
-  };
-
-  if (!isSupported) {
+  if (!videoEnabled) {
     return (
-      <div className="p-4 text-center text-red-600 bg-red-50 rounded-lg">
-        Video recording is not supported in this browser
+      <div className="card w-full">
+        <div className="flex items-center gap-2 mb-4">
+          <Video className="h-5 w-5" />
+          <h3 className="text-lg font-semibold">Video Recording</h3>
+        </div>
+        <div className="text-center py-8 text-gray-500">
+          <Video className="h-12 w-12 mx-auto mb-4 opacity-50" />
+          <p>Video recording is currently disabled</p>
+          <p className="text-sm">Enable ENABLE_VIDEO_RECORDING=true to use this feature</p>
+        </div>
       </div>
     );
   }
 
   return (
-    <div className="space-y-4">
-      <div className="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
-        <div className="flex items-center space-x-4">
-          {!isRecording ? (
-            <button
-              onClick={startRecording}
-              className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors"
-            >
-              Start Recording
-            </button>
-          ) : (
-            <div className="flex space-x-2">
-              {!isPaused ? (
-                <button
-                  onClick={pauseRecording}
-                  className="px-4 py-2 bg-yellow-600 text-white rounded-lg hover:bg-yellow-700 transition-colors"
-                >
-                  Pause
-                </button>
-              ) : (
-                <button
-                  onClick={resumeRecording}
-                  className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors"
-                >
-                  Resume
-                </button>
-              )}
-              <button
-                onClick={stopRecording}
-                className="px-4 py-2 bg-gray-600 text-white rounded-lg hover:bg-gray-700 transition-colors"
-              >
-                Stop
-              </button>
+    <div className="card w-full">
+      <div className="flex items-center gap-2 mb-4">
+        <Video className="h-5 w-5" />
+        <h3 className="text-lg font-semibold">Video Recording</h3>
+      </div>
+      <div className="space-y-4">
+        <div className="relative">
+          <video
+            ref={videoRef}
+            autoPlay
+            muted
+            playsInline
+            className="w-full h-64 bg-black rounded-lg object-cover"
+          />
+          {isRecording && (
+            <div className="absolute top-2 right-2 flex items-center gap-2 bg-red-500 text-white px-2 py-1 rounded text-sm">
+              <div className="w-2 h-2 bg-white rounded-full animate-pulse" />
+              Recording
             </div>
           )}
         </div>
-        
-        {isRecording && (
-          <div className="text-sm text-gray-600">
-            <div className="font-mono text-lg">{formatTime(recordingTime)}</div>
-            <div className="text-xs">
-              Max: {formatTime(maxDuration)} | Quality: Low (480p)
-            </div>
-          </div>
-        )}
-      </div>
 
-      {isRecording && (
-        <div className="p-4 bg-blue-50 rounded-lg">
-          <div className="text-sm text-blue-800">
-            <strong>Recording in progress...</strong>
-            <ul className="mt-2 space-y-1 text-xs">
-              <li>• Quality: Low (480p, 500 kbps)</li>
-              <li>• Format: WebM (smaller file size)</li>
-              <li>• Max size: {VIDEO_CONFIG.maxSize}MB</li>
-              <li>• Auto-deletes after 24 hours</li>
-            </ul>
-          </div>
+        <div className="flex justify-center gap-4">
+          {!isRecording ? (
+            <button
+              onClick={startRecording}
+              disabled={isStarting}
+              className="btn-primary bg-red-500 hover:bg-red-600"
+            >
+              {isStarting ? (
+                <Loader2 className="h-4 w-4 animate-spin mr-2" />
+              ) : (
+                <div className="w-4 h-4 bg-white rounded-full mr-2" />
+              )}
+              Start Recording
+            </button>
+          ) : (
+            <button
+              onClick={stopRecording}
+              className="btn-secondary border-red-500 text-red-500 hover:bg-red-50"
+            >
+              <Square className="h-4 w-4 mr-2" />
+              Stop Recording
+            </button>
+          )}
         </div>
-      )}
+
+        <div className="text-xs text-gray-500 text-center">
+          <p>Recording in low quality to minimize storage usage</p>
+          <p>Max duration: 5 minutes | Auto-cleanup: 24 hours</p>
+        </div>
+      </div>
     </div>
   );
 } 

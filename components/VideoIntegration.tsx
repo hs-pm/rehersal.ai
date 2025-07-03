@@ -3,123 +3,176 @@
 import React, { useState } from 'react';
 import VideoRecorder from './VideoRecorder';
 import VideoPlayer from './VideoPlayer';
+import { isFeatureEnabled } from '../lib/feature-flags';
 
 interface VideoIntegrationProps {
   sessionId: string;
   questionId: string;
-  onVideoUploaded?: (videoUrl: string) => void;
+  onVideoUploaded?: (videoId: string, url: string) => void;
+  onError?: (error: string) => void;
 }
 
-export default function VideoIntegration({ 
-  sessionId, 
-  questionId, 
-  onVideoUploaded 
+export default function VideoIntegration({
+  sessionId,
+  questionId,
+  onVideoUploaded,
+  onError
 }: VideoIntegrationProps) {
-  const [videoUrl, setVideoUrl] = useState<string | null>(null);
+  const [recordedVideo, setRecordedVideo] = useState<Blob | null>(null);
+  const [videoUrl, setVideoUrl] = useState<string>('');
   const [isUploading, setIsUploading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const [uploadedVideoId, setUploadedVideoId] = useState<string>('');
 
-  const handleVideoRecorded = async (videoBlob: Blob) => {
-    setIsUploading(true);
-    setError(null);
+  // Check if video features are enabled
+  const videoRecordingEnabled = isFeatureEnabled('VIDEO_RECORDING');
+  const videoStorageEnabled = isFeatureEnabled('VIDEO_STORAGE');
+  const videoPlaybackEnabled = isFeatureEnabled('VIDEO_PLAYBACK');
+
+  const handleRecordingComplete = async (blob: Blob) => {
+    setRecordedVideo(blob);
+    
+    // Create temporary URL for preview
+    const url = URL.createObjectURL(blob);
+    setVideoUrl(url);
+
+    // Auto-upload if storage is enabled
+    if (videoStorageEnabled) {
+      await uploadVideo(blob);
+    }
+  };
+
+  const uploadVideo = async (blob: Blob) => {
+    if (!videoStorageEnabled) {
+      onError?.('Video storage is not enabled');
+      return;
+    }
 
     try {
-      // Create FormData for upload
+      setIsUploading(true);
+
       const formData = new FormData();
+      formData.append('video', blob, 'interview-response.webm');
       formData.append('sessionId', sessionId);
       formData.append('questionId', questionId);
-      formData.append('video', videoBlob, 'response.webm');
 
-      // Upload video
       const response = await fetch('/api/videos/upload', {
         method: 'POST',
         body: formData,
       });
 
       if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.error || 'Failed to upload video');
+        const error = await response.json();
+        throw new Error(error.error || 'Failed to upload video');
       }
 
-      const data = await response.json();
-      setVideoUrl(data.video.url);
-      
-      if (onVideoUploaded) {
-        onVideoUploaded(data.video.url);
-      }
+      const result = await response.json();
+      setUploadedVideoId(result.video.id);
+      onVideoUploaded?.(result.video.id, result.video.url);
 
-    } catch (err) {
-      console.error('Error uploading video:', err);
-      setError(err instanceof Error ? err.message : 'Failed to upload video');
+    } catch (error) {
+      console.error('Error uploading video:', error);
+      onError?.(error instanceof Error ? error.message : 'Failed to upload video');
     } finally {
       setIsUploading(false);
     }
   };
 
-  const handleVideoError = (errorMessage: string) => {
-    setError(errorMessage);
+  const handleDownload = async (videoId: string) => {
+    try {
+      const response = await fetch(`/api/videos/${videoId}/download`);
+      if (!response.ok) throw new Error('Failed to download video');
+      
+      const blob = await response.blob();
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = `interview-response-${videoId}.webm`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      URL.revokeObjectURL(url);
+    } catch (error) {
+      console.error('Error downloading video:', error);
+      onError?.('Failed to download video');
+    }
   };
 
-  const handleDownload = (videoId: string) => {
-    // This will trigger the browser's download
-    console.log('Downloading video:', videoId);
-  };
+  // If no video features are enabled, show disabled state
+  if (!videoRecordingEnabled && !videoStorageEnabled && !videoPlaybackEnabled) {
+    return (
+      <div className="card">
+        <div className="text-center py-8 text-gray-500">
+          <div className="w-12 h-12 bg-gray-200 rounded-lg flex items-center justify-center mx-auto mb-4">
+            <svg className="w-6 h-6 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z" />
+            </svg>
+          </div>
+          <p className="text-lg font-medium mb-2">Video Features Disabled</p>
+          <p className="text-sm">Enable video features in your environment variables to use video recording and playback.</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-6">
       {/* Video Recording Section */}
-      {!videoUrl && (
-        <div className="border rounded-lg p-4">
-          <h3 className="text-lg font-semibold mb-4">Record Your Response</h3>
-          <VideoRecorder
-            onVideoRecorded={handleVideoRecorded}
-            onError={handleVideoError}
-            maxDuration={120} // 2 minutes
+      {videoRecordingEnabled && (
+        <VideoRecorder
+          onRecordingComplete={handleRecordingComplete}
+          onError={onError || (() => {})}
+          disabled={isUploading}
+        />
+      )}
+
+      {/* Upload Progress */}
+      {isUploading && (
+        <div className="card">
+          <div className="flex items-center justify-center py-4">
+            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mr-3"></div>
+            <span className="text-gray-600">Uploading video...</span>
+          </div>
+        </div>
+      )}
+
+      {/* Video Playback Section */}
+      {videoPlaybackEnabled && (videoUrl || uploadedVideoId) && (
+        <div className="card">
+          <h3 className="text-lg font-semibold mb-4">Recorded Response</h3>
+          <VideoPlayer
+            videoUrl={videoUrl || `/api/videos/${uploadedVideoId}`}
+            videoId={uploadedVideoId || 'temp'}
+            onDownload={handleDownload}
           />
           
-          {isUploading && (
-            <div className="mt-4 p-3 bg-blue-50 text-blue-800 rounded-lg">
-              Uploading video... Please wait.
+          {/* Manual Upload Button (if auto-upload failed) */}
+          {recordedVideo && !uploadedVideoId && videoStorageEnabled && !isUploading && (
+            <div className="mt-4">
+              <button
+                onClick={() => uploadVideo(recordedVideo)}
+                className="btn-primary"
+              >
+                Upload Video
+              </button>
             </div>
           )}
         </div>
       )}
 
-      {/* Video Playback Section */}
-      {videoUrl && (
-        <div className="border rounded-lg p-4">
-          <h3 className="text-lg font-semibold mb-4">Your Recorded Response</h3>
-          <VideoPlayer
-            videoUrl={videoUrl}
-            videoId={`${sessionId}-${questionId}`}
-            onDownload={handleDownload}
-          />
-          
-          <div className="mt-4 p-3 bg-yellow-50 text-yellow-800 rounded-lg text-sm">
-            <strong>Note:</strong> This video will be automatically deleted after 24 hours. 
-            Use the download button above if you want to keep it permanently.
-          </div>
+      {/* Feature Status */}
+      <div className="text-xs text-gray-500 space-y-1">
+        <div className="flex items-center gap-2">
+          <div className={`w-2 h-2 rounded-full ${videoRecordingEnabled ? 'bg-green-500' : 'bg-gray-300'}`}></div>
+          <span>Video Recording: {videoRecordingEnabled ? 'Enabled' : 'Disabled'}</span>
         </div>
-      )}
-
-      {/* Error Display */}
-      {error && (
-        <div className="p-4 bg-red-50 text-red-800 rounded-lg">
-          <strong>Error:</strong> {error}
+        <div className="flex items-center gap-2">
+          <div className={`w-2 h-2 rounded-full ${videoStorageEnabled ? 'bg-green-500' : 'bg-gray-300'}`}></div>
+          <span>Video Storage: {videoStorageEnabled ? 'Enabled' : 'Disabled'}</span>
         </div>
-      )}
-
-      {/* Video Quality Info */}
-      <div className="p-4 bg-gray-50 rounded-lg text-sm text-gray-600">
-        <h4 className="font-semibold mb-2">Video Quality Settings</h4>
-        <ul className="space-y-1">
-          <li>• Resolution: 480p (640x480)</li>
-          <li>• Bitrate: 500 kbps</li>
-          <li>• Format: WebM (VP8 + Opus)</li>
-          <li>• Max duration: 2 minutes</li>
-          <li>• Max file size: 10MB</li>
-          <li>• Auto-delete: 24 hours</li>
-        </ul>
+        <div className="flex items-center gap-2">
+          <div className={`w-2 h-2 rounded-full ${videoPlaybackEnabled ? 'bg-green-500' : 'bg-gray-300'}`}></div>
+          <span>Video Playback: {videoPlaybackEnabled ? 'Enabled' : 'Disabled'}</span>
+        </div>
       </div>
     </div>
   );
