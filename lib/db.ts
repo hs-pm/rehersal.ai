@@ -1,11 +1,24 @@
 import { Pool } from 'pg'
 
 // Hardcoded database configuration for Railway
+const dbUrl = process.env.DATABASE_URL || process.env.POSTGRES_URL;
+if (dbUrl) {
+  // Mask password for safety
+  const safeUrl = dbUrl.replace(/(postgres(?:ql)?:\/\/[^:]+:)[^@]+(@)/, '$1*****$2');
+  console.log('🔍 [DB] Using connection string:', safeUrl);
+} else {
+  console.warn('⚠️ [DB] No DATABASE_URL or POSTGRES_URL found in environment variables!');
+}
+
 const pool = new Pool({
   connectionString: process.env.DATABASE_URL || process.env.POSTGRES_URL,
   ssl: {
-    rejectUnauthorized: false
-  }
+    rejectUnauthorized: false,
+    checkServerIdentity: () => undefined
+  },
+  max: 20,
+  idleTimeoutMillis: 30000,
+  connectionTimeoutMillis: 2000,
 })
 
 export interface Question {
@@ -44,15 +57,7 @@ export interface Response {
 
 export async function createTables() {
   try {
-    // Drop existing questions table to recreate with new constraint
-    try {
-      await pool.query('DROP TABLE IF EXISTS questions CASCADE')
-      console.log('Dropped existing questions table')
-    } catch (error) {
-      console.log('No existing questions table to drop')
-    }
-
-    // Create questions table
+    // Create questions table if it doesn't exist
     await pool.query(`
       CREATE TABLE IF NOT EXISTS questions (
         id SERIAL PRIMARY KEY,
@@ -63,7 +68,7 @@ export async function createTables() {
       )
     `)
 
-    // Create practice_sessions table
+    // Create practice_sessions table if it doesn't exist
     await pool.query(`
       CREATE TABLE IF NOT EXISTS practice_sessions (
         id SERIAL PRIMARY KEY,
@@ -79,7 +84,7 @@ export async function createTables() {
       )
     `)
 
-    // Create responses table
+    // Create responses table if it doesn't exist
     await pool.query(`
       CREATE TABLE IF NOT EXISTS responses (
         id SERIAL PRIMARY KEY,
@@ -95,7 +100,7 @@ export async function createTables() {
       )
     `)
 
-    console.log('Database tables created successfully')
+    console.log('Database tables created/verified successfully')
   } catch (error) {
     console.error('Error creating tables:', error)
     throw error
@@ -104,13 +109,51 @@ export async function createTables() {
 
 export async function insertQuestion(question: Omit<Question, 'id' | 'created_at'>): Promise<Question> {
   try {
+    // Validate question type before insertion
+    const validTypes = ['behavioral', 'technical', 'situational', 'coding', 'sql_query_writing', 'python_data_science'];
+    
+    // More explicit type handling
+    let normalizedType: string;
+    if (typeof question.type === 'string') {
+      normalizedType = question.type.toLowerCase().trim();
+    } else if (typeof question.type === 'number') {
+      console.warn(`Received numeric type: ${question.type}, converting to behavioral`);
+      normalizedType = 'behavioral';
+    } else {
+      console.warn(`Unexpected type: ${question.type} (${typeof question.type}), converting to behavioral`);
+      normalizedType = 'behavioral';
+    }
+    
+    if (!validTypes.includes(normalizedType)) {
+      console.warn(`Invalid question type: "${normalizedType}", normalizing to "behavioral"`);
+      normalizedType = 'behavioral';
+    }
+    
+    // Ensure question text is not empty
+    if (!question.question || question.question.trim() === '') {
+      throw new Error('Question text cannot be empty');
+    }
+    
+    // Ensure category is not empty
+    if (!question.category || question.category.trim() === '') {
+      question.category = 'General';
+    }
+    
+    console.log('Inserting question with type:', normalizedType, 'typeof:', typeof normalizedType);
+    
     const result = await pool.query(
       'INSERT INTO questions (question, type, category) VALUES ($1, $2, $3) RETURNING *',
-      [question.question, question.type, question.category]
+      [question.question.trim(), normalizedType, question.category.trim()]
     )
     return result.rows[0]
   } catch (error) {
     console.error('Error inserting question:', error)
+    console.error('Question data that failed:', {
+      question: question.question,
+      type: question.type,
+      category: question.category,
+      typeOf: typeof question.type
+    })
     throw error
   }
 }

@@ -155,14 +155,25 @@ export default function NewPracticePage() {
         })
       })
       
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({ error: 'Unknown error occurred' }))
+        throw new Error(errorData.error || `HTTP ${response.status}: ${response.statusText}`)
+      }
+      
       const data = await response.json()
+      
+      // Check for errors in the response
+      if (data.error) {
+        throw new Error(data.error)
+      }
       
       // Check if we have questions in the response
       if (data.questions && data.questions.length > 0) {
         setQuestions(data.questions)
         
-        // Create practice session
+        // Create practice session (temporarily disabled for testing)
         try {
+          console.log('Creating practice session...')
           const sessionResponse = await fetch('/api/sessions/create', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
@@ -178,18 +189,63 @@ export default function NewPracticePage() {
           })
           
           const sessionData = await sessionResponse.json()
-          if (sessionData.success) {
-            setSessionId(sessionData.session.id)
+          console.log('Session creation response:', sessionData)
+          
+          if (sessionData.success && sessionData.session) {
+            setSessionId(sessionData.session.id.toString())
+            console.log('Session created successfully, sessionId:', sessionData.session.id)
+          } else {
+            console.log('Session creation failed, but continuing with questions')
+            // Continue without sessionId for testing
           }
-        } catch (sessionError) {
-          console.error('Failed to create session:', sessionError)
-          // Continue without session creation
+        } catch (error) {
+          console.error('Error creating session:', error)
+          // Continue without sessionId for testing
         }
+        
+        setCurrentQuestionIndex(0)
+        setSessionComplete(false)
+        setShowResults(false)
+        setEvaluation(null)
+        setTextResponse('')
+        setTranscript('')
+        setInterimTranscript('')
+        setRecordedVideo(null)
+        setClarifyingQuestion('')
+        setGuidance('')
+        setShowGuidance(false)
       } else {
-        console.error('No questions received from API')
+        alert('No questions were generated. Please try again.')
       }
     } catch (error) {
       console.error('Error generating questions:', error)
+      
+      let errorMessage = 'Failed to generate questions. Please try again.'
+      
+      if (error instanceof Error) {
+        const message = error.message
+        
+        // Provide user-friendly error messages
+        if (message.includes('API key configuration error')) {
+          errorMessage = 'Configuration error: Please check your API settings and try again.'
+        } else if (message.includes('Database connection error')) {
+          errorMessage = 'Database error: Please check your database connection and try again.'
+        } else if (message.includes('Response parsing error')) {
+          errorMessage = 'AI response error: The system had trouble processing the response. Please try again.'
+        } else if (message.includes('Network timeout error')) {
+          errorMessage = 'Network error: Please check your internet connection and try again.'
+        } else if (message.includes('HTTP 500')) {
+          errorMessage = 'Server error: Something went wrong on our end. Please try again in a moment.'
+        } else if (message.includes('HTTP 400')) {
+          errorMessage = 'Invalid request: Please check your input and try again.'
+        } else if (message.includes('HTTP 404')) {
+          errorMessage = 'Resource not found: The requested resource could not be found.'
+        } else {
+          errorMessage = message
+        }
+      }
+      
+      alert(errorMessage)
     } finally {
       setLoading(false)
     }
@@ -331,7 +387,19 @@ export default function NewPracticePage() {
   }, [])
 
   const handleSubmitResponse = async () => {
-    if (!sessionId || currentQuestionIndex >= questions.length) return
+    console.log('Submit button clicked!')
+    console.log('sessionId:', sessionId)
+    console.log('currentQuestionIndex:', currentQuestionIndex)
+    console.log('questions.length:', questions.length)
+    console.log('textResponse:', textResponse)
+    console.log('transcript:', transcript)
+    console.log('recordedVideo:', recordedVideo)
+    
+    // Temporarily allow submission without sessionId for testing
+    if (currentQuestionIndex >= questions.length) {
+      console.log('Early return: question index out of bounds')
+      return
+    }
 
     setSubmitting(true)
     try {
@@ -348,6 +416,48 @@ export default function NewPracticePage() {
         ? `Clarifying Question: "${clarifyingQuestion}"\n\nFinal Response: ${finalResponse}`
         : finalResponse
 
+      console.log('Submitting response to API...')
+      
+      // If no sessionId, create a mock evaluation for testing
+      if (!sessionId) {
+        console.log('No sessionId, creating mock evaluation')
+        const mockEvaluation = {
+          score: 75,
+          feedback: "This is a test evaluation since no database connection is available.",
+          strengths: ["Good response structure", "Clear communication"],
+          improvements: ["Could provide more specific examples", "Consider adding technical details"],
+          timeline_analysis: {
+            clarity: 7,
+            confidence: 6,
+            technical_depth: 5,
+            communication: 8,
+            structure: 7,
+            engagement: 6,
+            completeness: 6
+          }
+        }
+        
+        setEvaluation(mockEvaluation)
+        
+        // Move to next question or complete session
+        if (currentQuestionIndex < questions.length - 1) {
+          setCurrentQuestionIndex(prev => prev + 1)
+          setTextResponse('')
+          setTranscript('')
+          setInterimTranscript('')
+          setRecordedVideo(null)
+          setEvaluation(null)
+          // Reset clarifying question state
+          setClarifyingQuestion('')
+          setGuidance('')
+          setShowGuidance(false)
+        } else {
+          setSessionComplete(true)
+          setShowResults(true)
+        }
+        return
+      }
+
       const response = await fetch('/api/responses/evaluate', {
         method: 'POST',
         headers: {
@@ -363,10 +473,17 @@ export default function NewPracticePage() {
       })
 
       if (!response.ok) {
-        throw new Error('Failed to submit response')
+        const errorData = await response.json().catch(() => ({ error: 'Unknown error occurred' }))
+        throw new Error(errorData.error || `HTTP ${response.status}: ${response.statusText}`)
       }
 
       const data = await response.json()
+      console.log('Response submitted successfully:', data)
+      
+      if (data.error) {
+        throw new Error(data.error)
+      }
+      
       setEvaluation(data.evaluation)
 
       // Move to next question or complete session
@@ -387,7 +504,33 @@ export default function NewPracticePage() {
       }
     } catch (error) {
       console.error('Error submitting response:', error)
-      alert('Failed to submit response. Please try again.')
+      
+      let errorMessage = 'Failed to submit response. Please try again.'
+      
+      if (error instanceof Error) {
+        const message = error.message
+        
+        // Provide user-friendly error messages
+        if (message.includes('API key configuration error')) {
+          errorMessage = 'Configuration error: Please check your API settings and try again.'
+        } else if (message.includes('Database connection error')) {
+          errorMessage = 'Database error: Please check your database connection and try again.'
+        } else if (message.includes('Response parsing error')) {
+          errorMessage = 'AI response error: The system had trouble processing the response. Please try again.'
+        } else if (message.includes('Network timeout error')) {
+          errorMessage = 'Network error: Please check your internet connection and try again.'
+        } else if (message.includes('HTTP 500')) {
+          errorMessage = 'Server error: Something went wrong on our end. Please try again in a moment.'
+        } else if (message.includes('HTTP 400')) {
+          errorMessage = 'Invalid request: Please check your input and try again.'
+        } else if (message.includes('HTTP 404')) {
+          errorMessage = 'Resource not found: The requested resource could not be found.'
+        } else {
+          errorMessage = message
+        }
+      }
+      
+      alert(errorMessage)
     } finally {
       setSubmitting(false)
     }

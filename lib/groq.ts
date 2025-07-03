@@ -28,60 +28,90 @@ export interface Evaluation {
   }
 }
 
-// Helper: Normalize and validate question type
-const VALID_TYPES = ['behavioral', 'technical', 'situational', 'coding', 'sql_query_writing', 'python_data_science'] as const;
-type ValidType = typeof VALID_TYPES[number];
-function normalizeType(type: any, fallback: ValidType): ValidType {
-  if (typeof type !== 'string') return fallback;
-  const normalized = type.trim().toLowerCase();
-  if (VALID_TYPES.includes(normalized as ValidType)) {
-    return normalized as ValidType;
-  }
-  return fallback;
-}
-
 // Helper: Robust JSON parsing that handles common formatting issues
 function parseJSONSafely(jsonString: string): any {
+  // First attempt: direct parsing
   try {
-    // First try direct parsing
     return JSON.parse(jsonString);
-  } catch (error) {
-    console.log('Direct JSON parsing failed, attempting cleanup...');
+  } catch (firstError) {
+    console.log('Failed to parse JSON, trying to extract JSON from response:', firstError);
     
-    // Clean up common JSON issues
-    let cleaned = jsonString
-      // Remove trailing commas before closing brackets/braces
-      .replace(/,(\s*[}\]])/g, '$1')
-      // Remove trailing commas in objects
-      .replace(/,(\s*})/g, '$1')
-      // Remove trailing commas in arrays
-      .replace(/,(\s*\])/g, '$1')
-      // Fix common quote issues
-      .replace(/[\u2018\u2019]/g, "'")
-      .replace(/[\u201C\u201D]/g, '"')
-      // Remove any non-printable characters
-      .replace(/[\x00-\x1F\x7F-\x9F]/g, '')
-      // Trim whitespace
-      .trim();
-    
+    // Second attempt: clean up common issues
     try {
+      let cleaned = jsonString
+        .replace(/,\s*}/g, '}')  // Remove trailing commas before closing braces
+        .replace(/,\s*]/g, ']')  // Remove trailing commas before closing brackets
+        .replace(/,\s*$/g, '')   // Remove trailing commas at end
+        .replace(/^\s*\[/, '[')  // Ensure starts with [
+        .replace(/\]\s*$/, ']'); // Ensure ends with ]
+      
       return JSON.parse(cleaned);
     } catch (secondError) {
-      console.log('Cleaned JSON parsing also failed:', secondError);
+      console.log('Failed to parse cleaned JSON:', secondError);
       
-      // Try to extract just the array part
-      const arrayMatch = cleaned.match(/\[[\s\S]*\]/);
-      if (arrayMatch) {
-        try {
-          return JSON.parse(arrayMatch[0]);
-        } catch (thirdError) {
-          console.log('Array extraction parsing failed:', thirdError);
+      // Third attempt: try to extract array from the response
+      try {
+        const arrayMatch = jsonString.match(/\[[\s\S]*\]/);
+        if (arrayMatch) {
+          let extracted = arrayMatch[0]
+            .replace(/,\s*}/g, '}')
+            .replace(/,\s*]/g, ']')
+            .replace(/,\s*$/g, '');
+          return JSON.parse(extracted);
         }
+      } catch (thirdError) {
+        console.log('Failed to extract and parse array:', thirdError);
+      }
+      
+      // Fourth attempt: try to fix common JSON issues more aggressively
+      try {
+        let fixed = jsonString
+          .replace(/,\s*([}\]])/g, '$1')  // Remove trailing commas
+          .replace(/,\s*$/gm, '')         // Remove trailing commas at line ends
+          .replace(/,\s*([}\]])/g, '$1')  // Remove any remaining trailing commas
+          .replace(/([^"])\s*:\s*([^"{\[\d])/g, '$1: "$2')  // Quote unquoted values
+          .replace(/([^"])\s*:\s*$/gm, '$1: ""')  // Handle empty values
+          .replace(/,\s*([}\]])/g, '$1');  // Final trailing comma cleanup
+        
+        return JSON.parse(fixed);
+      } catch (fourthError) {
+        console.log('Object extraction parsing failed:', fourthError);
       }
       
       throw new Error('All JSON parsing attempts failed');
     }
   }
+}
+
+// Enhanced type validation and normalization
+const VALID_TYPES = ['behavioral', 'technical', 'situational', 'coding', 'sql_query_writing', 'python_data_science'] as const;
+type ValidType = typeof VALID_TYPES[number];
+
+function normalizeType(type: any, fallback: ValidType = 'behavioral'): ValidType {
+  // Handle null, undefined, or empty values
+  if (!type || type === '' || type === null || type === undefined) {
+    return fallback;
+  }
+  
+  // Handle numeric values (convert to string)
+  if (typeof type === 'number') {
+    console.warn(`Received numeric type: ${type}, converting to fallback: ${fallback}`);
+    return fallback;
+  }
+  
+  // Handle string values
+  if (typeof type === 'string') {
+    const normalized = type.trim().toLowerCase();
+    if (VALID_TYPES.includes(normalized as ValidType)) {
+      return normalized as ValidType;
+    }
+    console.warn(`Invalid type string: "${type}", using fallback: ${fallback}`);
+    return fallback;
+  }
+  
+  // Handle any other type
+  console.warn(`Unexpected type value: ${type} (${typeof type}), using fallback: ${fallback}`);
+  return fallback;
 }
 
 export async function generateQuestions(
@@ -124,11 +154,23 @@ export async function generateQuestions(
       // Extract questions from the JSON object response
       const parsedQuestions = parsedResponse.questions || parsedResponse
       
-      // Validate and fix question types
-      questions = parsedQuestions.map((q: any) => ({
-        ...q,
-        type: normalizeType(q.type, questionType),
-      }))
+      // Validate and fix question types with enhanced validation
+      questions = parsedQuestions.map((q: any, index: number) => {
+        // Ensure all required fields exist
+        const question: Question = {
+          id: (q.id || (index + 1)).toString(),
+          question: q.question || `Sample ${subject} question ${index + 1}`,
+          type: normalizeType(q.type, questionType),
+          category: q.category || subject
+        }
+        
+        // Log any type normalization for debugging
+        if (q.type !== question.type) {
+          console.log(`Type normalized from "${q.type}" to "${question.type}" for question ${index + 1}`);
+        }
+        
+        return question;
+      })
     } catch (error) {
       console.log('Failed to parse JSON with robust parser:', error)
       

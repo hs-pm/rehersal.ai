@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { generateQuestions } from '../../../../lib/groq'
-import { insertQuestion, Question, createTables } from '../../../../lib/db'
+import { insertQuestion, createTables } from '../../../../lib/db'
 
 export async function POST(request: NextRequest) {
   try {
@@ -29,16 +29,10 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    console.log('Generating questions for subject:', subject, 'count:', count, 'types:', types)
+    console.log(`Generating questions for subject: ${subject} count: ${count} types:`, types)
 
     // Ensure database tables exist
-    try {
-      await createTables()
-      console.log('Database tables created/verified successfully')
-    } catch (dbError) {
-      console.error('Failed to create database tables:', dbError)
-      // Continue without database storage
-    }
+    await createTables()
 
     // Generate questions using Groq with advanced context
     const questions = await generateQuestions(subject, count, types, {
@@ -49,27 +43,55 @@ export async function POST(request: NextRequest) {
     console.log('Generated questions:', questions)
 
     // Store questions in database
-    const storedQuestions: Question[] = []
+    const storedQuestions: any[] = []
     for (const question of questions) {
       try {
         const storedQuestion = await insertQuestion(question)
         storedQuestions.push(storedQuestion)
-      } catch (dbError) {
-        console.error('Failed to store question in database:', dbError)
+      } catch (error) {
+        console.error('Error inserting question:', error)
         // Continue with other questions even if one fails
       }
     }
 
     return NextResponse.json({
-      questions: questions,
-      storedCount: storedQuestions.length,
-      totalGenerated: questions.length
+      success: true,
+      questions: storedQuestions
     })
 
   } catch (error) {
     console.error('Error generating questions:', error)
+    
+    // Provide more detailed error information
+    let errorMessage = 'Failed to generate questions'
+    let errorDetails: any = null
+    
+    if (error instanceof Error) {
+      errorMessage = error.message
+      errorDetails = {
+        name: error.name,
+        message: error.message,
+        stack: error.stack
+      }
+    }
+    
+    // Check for specific error types
+    if (errorMessage.includes('GROQ_API_KEY')) {
+      errorMessage = 'API key configuration error. Please check your GROQ API key.'
+    } else if (errorMessage.includes('database') || errorMessage.includes('connection')) {
+      errorMessage = 'Database connection error. Please check your database configuration.'
+    } else if (errorMessage.includes('JSON') || errorMessage.includes('parse')) {
+      errorMessage = 'Response parsing error. The AI response was malformed.'
+    } else if (errorMessage.includes('timeout') || errorMessage.includes('network')) {
+      errorMessage = 'Network timeout error. Please check your internet connection and try again.'
+    }
+    
     return NextResponse.json(
-      { error: 'Failed to generate questions' },
+      { 
+        error: errorMessage,
+        details: errorDetails,
+        timestamp: new Date().toISOString()
+      },
       { status: 500 }
     )
   }

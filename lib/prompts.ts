@@ -123,7 +123,8 @@ PERSONALIZATION GUIDELINES:
 - Create questions that bridge the candidate's past experience with the target role
 - Consider the candidate's self-identified areas of focus
 
-Return ONLY a valid JSON object with this exact structure:
+CRITICAL: Return ONLY a valid JSON object with this exact structure. Do NOT include any trailing commas, extra text, or formatting:
+
 {
   "questions": [
     {"id": "1", "question": "Your behavioral question here", "type": "behavioral", "category": "subject"},
@@ -131,7 +132,11 @@ Return ONLY a valid JSON object with this exact structure:
   ]
 }
 
-Do NOT include any other text, formatting, or explanations. Only return the JSON object.`,
+IMPORTANT RULES:
+- Use ONLY the exact question types: "behavioral", "technical", "situational", "coding", "sql_query_writing", "python_data_science"
+- Do NOT use numbers, symbols, or any other values for the "type" field
+- Ensure all JSON is properly formatted with no trailing commas
+- Do NOT include any explanatory text outside the JSON object`,
 
     evaluator: `You are evaluating a behavioral interview response. Assess the candidate's answer based on the following criteria:
 
@@ -150,24 +155,23 @@ Do NOT include any other text, formatting, or explanations. Only return the JSON
 - Below 60: Poor structure, no specific examples, missing outcomes
 
 **Response Format:**
-Return ONLY a valid JSON object with this exact structure:
+Return ONLY a valid JSON object with this exact structure. Do NOT include any trailing commas or extra text:
+
 {
-  "score": number (0-100),
+  "score": 85,
   "feedback": "Detailed feedback explaining the score",
   "strengths": ["strength1", "strength2"],
   "improvements": ["improvement1", "improvement2"],
   "timeline_analysis": {
-    "clarity": number (1-10),
-    "confidence": number (1-10),
-    "technical_depth": number (1-10),
-    "communication": number (1-10),
-    "structure": number (1-10),
-    "engagement": number (1-10),
-    "completeness": number (1-10)
+    "clarity": 8,
+    "confidence": 7,
+    "technical_depth": 6,
+    "communication": 8,
+    "structure": 7,
+    "engagement": 8,
+    "completeness": 7
   }
-}
-
-Do NOT include any other text or formatting. Only return the JSON object.`
+}`
   },
 
   technical: {

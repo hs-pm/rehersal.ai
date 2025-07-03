@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { createPracticeSession } from '../../../../lib/db'
+import { createPracticeSession, createTables } from '../../../../lib/db'
 
 export async function POST(request: NextRequest) {
   try {
@@ -12,6 +12,8 @@ export async function POST(request: NextRequest) {
       candidateAnalysis 
     } = await request.json()
 
+    console.log('Session creation request:', { title, subject, totalQuestions, resume, jobDescription, candidateAnalysis })
+
     if (!title || !subject) {
       return NextResponse.json(
         { error: 'Title and subject are required' },
@@ -19,6 +21,12 @@ export async function POST(request: NextRequest) {
       )
     }
 
+    // Ensure database tables exist
+    console.log('Creating/verifying database tables...')
+    await createTables()
+    console.log('Database tables created/verified successfully')
+
+    console.log('Creating practice session...')
     const session = await createPracticeSession({
       title,
       subject,
@@ -28,6 +36,7 @@ export async function POST(request: NextRequest) {
       job_description: jobDescription,
       candidate_analysis: candidateAnalysis
     })
+    console.log('Practice session created successfully:', session)
 
     return NextResponse.json({
       success: true,
@@ -36,8 +45,14 @@ export async function POST(request: NextRequest) {
 
   } catch (error) {
     console.error('Error creating session:', error)
+    console.error('Error details:', {
+      message: error.message,
+      stack: error.stack,
+      code: error.code,
+      detail: error.detail
+    })
     return NextResponse.json(
-      { error: 'Failed to create session' },
+      { error: 'Failed to create session', details: error.message },
       { status: 500 }
     )
   }
