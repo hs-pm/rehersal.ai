@@ -591,6 +591,30 @@ export default function NewPracticePage() {
                 </div>
                 
                 <div className="space-y-4">
+                  {/* Highlighted Pro Tip - Add Resume, Job Description & Preferred Questions */}
+                  <div className="bg-gradient-to-r from-orange-50 to-red-50 border-2 border-orange-200 rounded-lg p-4 relative overflow-hidden">
+                    <div className="absolute top-0 right-0 w-16 h-16 bg-orange-100 rounded-full -mr-8 -mt-8 opacity-50"></div>
+                    <div className="absolute bottom-0 left-0 w-12 h-12 bg-red-100 rounded-full -ml-6 -mb-6 opacity-50"></div>
+                    <div className="relative">
+                      <div className="flex items-start">
+                        <div className="flex-shrink-0 w-8 h-8 bg-gradient-to-br from-orange-400 to-red-500 rounded-full flex items-center justify-center mt-0.5 shadow-lg">
+                          <svg className="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
+                          </svg>
+                        </div>
+                        <div className="ml-3">
+                          <h4 className="text-sm font-bold text-orange-800 flex items-center">
+                            <span className="mr-2">⚡</span>
+                            Boost Question Specificity
+                          </h4>
+                          <p className="mt-1 text-xs text-orange-700 font-medium">
+                            Add your <strong>resume</strong>, <strong>job description</strong>, and <strong>preferred questions</strong> in Advanced Options to get highly targeted, relevant questions that match your experience and role requirements.
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
                   <div className="flex items-start">
                     <div className="flex-shrink-0 w-6 h-6 bg-blue-100 rounded-full flex items-center justify-center mt-0.5">
                       <svg className="w-3 h-3 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -662,7 +686,7 @@ export default function NewPracticePage() {
                       type="text"
                       value={subject}
                       onChange={(e) => setSubject(e.target.value)}
-                      placeholder="e.g., React, System Design, Behavioral Questions"
+                      placeholder="e.g., Product Management, Data Science, System Design"
                       className="input-field"
                     />
                   </div>
