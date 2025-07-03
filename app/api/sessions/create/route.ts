@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { createPracticeSession, createTables } from '../../../../lib/db'
+import { createPracticeSession } from '../../../../lib/vercel-storage'
 
 export async function POST(request: NextRequest) {
   try {
@@ -9,10 +9,11 @@ export async function POST(request: NextRequest) {
       totalQuestions, 
       resume, 
       jobDescription, 
-      candidateAnalysis 
+      candidateAnalysis, 
+      questionIds
     } = await request.json()
 
-    console.log('Session creation request:', { title, subject, totalQuestions, resume, jobDescription, candidateAnalysis })
+    console.log('Session creation request:', { title, subject, totalQuestions, resume, jobDescription, candidateAnalysis, questionIds })
 
     if (!title || !subject) {
       return NextResponse.json(
@@ -21,10 +22,8 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    // Ensure database tables exist
-    console.log('Creating/verifying database tables...')
-    await createTables()
-    console.log('Database tables created/verified successfully')
+    // No need to create tables with Vercel KV storage
+    console.log('Using Vercel KV storage...')
 
     console.log('Creating practice session...')
     const session = await createPracticeSession({
@@ -34,7 +33,8 @@ export async function POST(request: NextRequest) {
       completed_questions: 0,
       resume,
       job_description: jobDescription,
-      candidate_analysis: candidateAnalysis
+      candidate_analysis: candidateAnalysis,
+      question_ids: questionIds || []
     })
     console.log('Practice session created successfully:', session)
 
@@ -46,13 +46,13 @@ export async function POST(request: NextRequest) {
   } catch (error) {
     console.error('Error creating session:', error)
     console.error('Error details:', {
-      message: error.message,
-      stack: error.stack,
-      code: error.code,
-      detail: error.detail
+      message: error instanceof Error ? error.message : String(error),
+      stack: error instanceof Error ? error.stack : undefined,
+      code: (error as any)?.code,
+      detail: (error as any)?.detail
     })
     return NextResponse.json(
-      { error: 'Failed to create session', details: error.message },
+      { error: 'Failed to create session', details: error instanceof Error ? error.message : String(error) },
       { status: 500 }
     )
   }

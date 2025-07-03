@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { generateQuestions } from '../../../../lib/groq'
-import { insertQuestion, createTables } from '../../../../lib/db'
+import { insertQuestion } from '../../../../lib/vercel-storage'
 
 export async function POST(request: NextRequest) {
   try {
@@ -31,8 +31,7 @@ export async function POST(request: NextRequest) {
 
     console.log(`Generating questions for subject: ${subject} count: ${count} types:`, types)
 
-    // Ensure database tables exist
-    await createTables()
+    // No need to create tables with Vercel KV storage
 
     // Generate questions using Groq with advanced context
     const questions = await generateQuestions(subject, count, types, {

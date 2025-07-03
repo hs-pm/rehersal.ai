@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { getPracticeSessionById, getResponses } from '../../../../../lib/db'
+import { getPracticeSessionById, getResponses } from '../../../../../lib/vercel-storage'
+import type { Response as PracticeResponse } from '../../../../../lib/vercel-storage'
 
 export async function GET(
   request: NextRequest,
@@ -19,7 +20,13 @@ export async function GET(
     }
 
     // Get responses for this session
-    const responses = await getResponses(sessionId)
+    let responses = await getResponses(sessionId)
+
+    // If session has question_ids, order responses accordingly
+    if (session.question_ids && Array.isArray(session.question_ids)) {
+      const responseMap = new Map(responses.map(r => [r.question_id, r]))
+      responses = session.question_ids.map(qid => responseMap.get(qid)).filter((r: PracticeResponse | undefined): r is PracticeResponse => Boolean(r))
+    }
 
     // Combine session data with responses
     const sessionData = {

@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { videoStorage } from '../../../../lib/video-storage';
+import { uploadVideo } from '../../../../lib/vercel-storage';
 import { isFeatureEnabled } from '../../../../lib/feature-flags';
 
 export async function POST(request: NextRequest) {
@@ -41,17 +41,14 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Upload video using the new storage interface
-    const video = await videoStorage.uploadVideo(videoFile, sessionId, questionId);
+    // Upload video using Vercel Blob storage
+    const video = await uploadVideo(videoFile, sessionId, questionId);
 
     return NextResponse.json({
       success: true,
       video: {
         id: video.id,
-        url: video.url,
-        size: video.size,
-        duration: video.duration,
-        expiresAt: video.expiresAt
+        url: video.url
       }
     });
 

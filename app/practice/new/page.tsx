@@ -184,7 +184,8 @@ export default function NewPracticePage() {
               // Include context fields for personalized evaluation
               resume: resume.trim() || undefined,
               jobDescription: jobDescription.trim() || undefined,
-              candidateAnalysis: candidateAnalysis.trim() || undefined
+              candidateAnalysis: candidateAnalysis.trim() || undefined,
+              questionIds: data.questions.map((q: any) => q.id)
             })
           })
           

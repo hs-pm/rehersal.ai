@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { evaluateResponse, transcribeAudio } from '../../../../lib/groq'
-import { insertResponse, getQuestionById, getPracticeSessionById, createTables } from '../../../../lib/db'
+import { insertResponse, getQuestionById, getPracticeSessionById } from '../../../../lib/vercel-storage'
 
 export async function POST(request: NextRequest) {
   try {
@@ -23,10 +23,8 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    // Ensure database tables exist
-    console.log('Creating/verifying database tables...')
-    await createTables()
-    console.log('Database tables created/verified successfully')
+    // No need to create tables with Vercel KV storage
+    console.log('Using Vercel KV storage...')
 
     let transcription = ''
     let finalResponse = textResponse || ''
